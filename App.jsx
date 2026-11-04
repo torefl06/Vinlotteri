@@ -486,19 +486,29 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 font-sans pb-12">
-      <header className="bg-[#0f172a] border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="bg-amber-500/20 p-2.5 rounded-xl border border-amber-500/30 text-amber-400 text-2xl">🍷</div>
-          <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Vinlotteriet</h1>
-            <p className="text-xs text-slate-400">Lærerværelset Vinlotteri • {TICKET_PRICE} kr/lodd</p>
+      
+      {/* MOBILVENNLIG HEADER */}
+      <header className="bg-[#0f172a] border-b border-slate-800 px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center space-x-2">
+            <div className="bg-amber-500/20 p-2 rounded-xl border border-amber-500/30 text-amber-400 text-xl">🍷</div>
+            <div>
+              <h1 className="text-xl font-black text-white tracking-tight">Vinlotteriet</h1>
+              <p className="text-[10px] text-slate-400">Lærerværelset • {TICKET_PRICE} kr/lodd</p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center space-x-1.5 text-xs sm:hidden">
+            <span className="text-amber-400 font-bold">🎟️ {activeWeek}:</span>
+            <span className="font-extrabold text-white">{soldCountInActiveWeek}/{MAX_TICKETS}</span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        {/* HORISONTALT SKROLLBAR MENY PÅ MOBIL */}
+        <div className="flex items-center space-x-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
           <button 
             onClick={() => setShowFeedbackModal(true)}
-            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center space-x-1"
           >
             <span>💬</span>
             <span>Ris & ros</span>
@@ -506,29 +516,29 @@ export default function App() {
 
           <button 
             onClick={() => setShowQRModal(true)}
-            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center space-x-1"
           >
             <span>📱</span>
-            <span>QR-kode</span>
+            <span>QR</span>
           </button>
 
           <button 
             onClick={() => setShowPrizeModal(true)}
-            className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+            className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center space-x-1"
           >
             <span>🍷</span>
-            <span>Ukens Premier ({activeWeek})</span>
+            <span>Premier</span>
           </button>
 
           <button 
             onClick={() => setShowWinnersModal(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition shadow-md flex items-center space-x-1.5"
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs px-3 py-1.5 rounded-xl whitespace-nowrap shadow-md flex items-center space-x-1"
           >
             <span>🏆</span>
             <span>Vinnere</span>
           </button>
 
-          <div className="bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl flex items-center space-x-2 text-xs">
+          <div className="hidden sm:flex bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl items-center space-x-2 text-xs">
             <span className="text-amber-400 font-bold">🎟️ {activeWeek}:</span>
             <span className="font-extrabold text-white">{soldCountInActiveWeek} / {MAX_TICKETS}</span>
           </div>
@@ -538,115 +548,92 @@ export default function App() {
               if (isAdminUnlocked) setIsAdminUnlocked(false);
               else setShowAdminModal(true);
             }}
-            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl text-slate-300"
+            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold px-2.5 py-1.5 rounded-xl text-slate-300 whitespace-nowrap"
           >
             {isAdminUnlocked ? "🔓 Admin" : "⚙️ Admin"}
           </button>
         </div>
       </header>
 
-      <div className="bg-[#0f172a]/70 border-b border-slate-800 px-6 py-3 flex items-center space-x-2 overflow-x-auto">
-        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider mr-2">Velg Uke:</span>
+      {/* UKE-VELGER (SKROLLBAR) */}
+      <div className="bg-[#0f172a]/70 border-b border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto scrollbar-none">
+        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mr-1 whitespace-nowrap">Uke:</span>
         {weeksList.map(w => (
           <button 
             key={w}
             onClick={() => { setActiveWeek(w); setTempWinner1(null); setTempWinner2(null); setShowConfirmDraw(false); }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${activeWeek === w ? 'bg-amber-500 text-slate-950 shadow-lg scale-105' : 'bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${activeWeek === w ? 'bg-amber-500 text-slate-950 shadow-md scale-105' : 'bg-slate-900 border border-slate-800 text-slate-300'}`}
           >
             {w}
           </button>
         ))}
       </div>
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+      <main className="max-w-7xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
 
+        {/* ADMIN TREKNING */}
         {isAdminUnlocked && (
-          <div className="bg-gradient-to-b from-amber-950/40 to-slate-900/90 border-2 border-amber-500/50 p-6 rounded-2xl shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-amber-500/30 pb-3">
-              <h2 className="text-lg font-black text-amber-400 flex items-center space-x-2">
-                <span>🎰 Enarmet Banditt - Trekning ({activeWeek})</span>
+          <div className="bg-gradient-to-b from-amber-950/40 to-slate-900/90 border-2 border-amber-500/50 p-4 sm:p-6 rounded-2xl shadow-2xl space-y-4 sm:space-y-6">
+            <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
+              <h2 className="text-sm sm:text-lg font-black text-amber-400 flex items-center space-x-2">
+                <span>🎰 Trekning ({activeWeek})</span>
               </h2>
-              <button onClick={resetToInitial} className="text-xs bg-rose-950 hover:bg-rose-900 text-rose-300 px-3 py-1 rounded-lg border border-rose-800 font-bold">
-                🔄 Tilbakestill alt
+              <button onClick={resetToInitial} className="text-[10px] sm:text-xs bg-rose-950 text-rose-300 px-2 py-1 rounded-lg border border-rose-800 font-bold">
+                🔄 Tilbakestill
               </button>
             </div>
             
-            <div className="flex flex-col items-center justify-center space-y-6 py-2">
-              <div className="bg-slate-950 border-4 border-amber-500/80 p-6 rounded-3xl shadow-2xl flex items-center space-x-6 relative">
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-500 text-slate-950 font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
-                  {isSpinning ? "🎰 TREKNING PÅGÅR..." : "KLAR TIL TREKNING"}
-                </div>
-
-                <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
-                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="bg-slate-950 border-2 sm:border-4 border-amber-500/80 p-4 sm:p-6 rounded-2xl shadow-2xl flex items-center space-x-4 relative">
+                <div className="w-16 h-22 sm:w-20 sm:h-28 bg-black border border-slate-800 rounded-xl flex items-center justify-center">
+                  <span className={`text-4xl sm:text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
                     {slotDisplay.tens}
                   </span>
                 </div>
 
-                <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
-                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
+                <div className="w-16 h-22 sm:w-20 sm:h-28 bg-black border border-slate-800 rounded-xl flex items-center justify-center">
+                  <span className={`text-4xl sm:text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
                     {slotDisplay.ones}
                   </span>
                 </div>
-
-                <div className="hidden md:flex flex-col items-center">
-                  <div className="w-3 h-16 bg-slate-700 rounded-t-full border border-slate-600"></div>
-                  <div className="w-8 h-8 bg-rose-600 rounded-full border-2 border-rose-400 shadow-lg -mt-2"></div>
-                </div>
               </div>
 
-              <div className="flex flex-wrap gap-4 justify-center">
+              <div className="flex flex-wrap gap-2 sm:gap-4 justify-center w-full">
                 <button 
                   onClick={() => startSlotMachine(1)}
                   disabled={isSpinning}
-                  className={`bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black px-6 py-3 rounded-xl text-sm shadow-xl transform active:scale-95 transition ${isSpinning ? 'opacity-50' : ''}`}
+                  className={`flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-lg ${isSpinning ? 'opacity-50' : ''}`}
                 >
-                  {isSpinning ? "🎰 Snurrer..." : "🍾 TREKK FLASKE 1"}
+                  🍾 FLASKE 1
                 </button>
 
                 <button 
                   onClick={() => startSlotMachine(2)}
                   disabled={isSpinning || !tempWinner1}
-                  className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 font-black px-6 py-3 rounded-xl text-sm shadow-xl transform active:scale-95 transition ${(!tempWinner1 || isSpinning) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  className={`flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-lg ${(!tempWinner1 || isSpinning) ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
-                  {isSpinning ? "🎰 Snurrer..." : "🍾 TREKK FLASKE 2"}
+                  🍾 FLASKE 2
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-                <div className={`p-4 rounded-xl border text-center ${tempWinner1 ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-950/50 border-slate-800'}`}>
-                  <p className="text-xs font-bold text-amber-400 uppercase">Flaske 1 Vinner:</p>
-                  <p className="text-lg font-black text-white">{tempWinner1 ? `${tempWinner1.owner} (Lodd #${tempWinner1.ticketNum})` : "Ikke trukket ennå"}</p>
+              <div className="grid grid-cols-2 gap-2 w-full text-xs">
+                <div className={`p-2.5 rounded-xl border text-center ${tempWinner1 ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-950/50 border-slate-800'}`}>
+                  <p className="text-[10px] font-bold text-amber-400 uppercase">Flaske 1:</p>
+                  <p className="font-extrabold text-white truncate">{tempWinner1 ? `${tempWinner1.owner} (#${tempWinner1.ticketNum})` : "-"}</p>
                 </div>
 
-                <div className={`p-4 rounded-xl border text-center ${tempWinner2 ? 'bg-emerald-950/40 border-emerald-500' : 'bg-slate-950/50 border-slate-800'}`}>
-                  <p className="text-xs font-bold text-emerald-400 uppercase">Flaske 2 Vinner:</p>
-                  <p className="text-lg font-black text-white">{tempWinner2 ? `${tempWinner2.owner} (Lodd #${tempWinner2.ticketNum})` : "Ikke trukket ennå"}</p>
+                <div className={`p-2.5 rounded-xl border text-center ${tempWinner2 ? 'bg-emerald-950/40 border-emerald-500' : 'bg-slate-950/50 border-slate-800'}`}>
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase">Flaske 2:</p>
+                  <p className="font-extrabold text-white truncate">{tempWinner2 ? `${tempWinner2.owner} (#${tempWinner2.ticketNum})` : "-"}</p>
                 </div>
               </div>
 
               {showConfirmDraw && tempWinner1 && tempWinner2 && (
-                <div className="bg-amber-950/80 border-2 border-amber-400 p-6 rounded-2xl text-center space-y-3 max-w-lg shadow-2xl">
-                  <h3 className="text-lg font-black text-amber-300">❓ Er denne trekningen endelig?</h3>
-                  <p className="text-xs text-slate-300">
-                    Vinnere for {activeWeek}:<br/>
-                    <strong>Flaske 1:</strong> {tempWinner1.owner} (# {tempWinner1.ticketNum})<br/>
-                    <strong>Flaske 2:</strong> {tempWinner2.owner} (# {tempWinner2.ticketNum})
-                  </p>
-
-                  <div className="flex justify-center space-x-3 pt-2">
-                    <button 
-                      onClick={() => { setTempWinner1(null); setTempWinner2(null); setShowConfirmDraw(false); }}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs"
-                    >
-                      🔄 Omkamp / Trekk på nytt
-                    </button>
-                    <button 
-                      onClick={saveFinalWinners}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-6 py-2 rounded-xl text-xs shadow-lg"
-                    >
-                      ✅ Ja, godkjenn & lagre
-                    </button>
+                <div className="bg-amber-950/80 border-2 border-amber-400 p-4 rounded-2xl text-center space-y-2 w-full shadow-2xl">
+                  <h3 className="text-sm font-black text-amber-300">Godkjenn trekning for {activeWeek}?</h3>
+                  <div className="flex justify-center space-x-2 pt-1">
+                    <button onClick={() => { setTempWinner1(null); setTempWinner2(null); setShowConfirmDraw(false); }} className="bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-xl text-xs">Omkamp</button>
+                    <button onClick={saveFinalWinners} className="bg-emerald-500 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs shadow-lg">✅ Godkjenn</button>
                   </div>
                 </div>
               )}
@@ -654,69 +641,71 @@ export default function App() {
           </div>
         )}
 
-        <div className="bg-[#0f172a] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-3 w-full md:w-auto">
-            <label className="text-xs font-bold text-slate-400 uppercase">Ditt Navn:</label>
-            <input 
-              type="text" 
-              placeholder="Skriv navnet ditt her..." 
-              value={buyerName}
-              onChange={(e) => setBuyerName(e.target.value)}
-              className="bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 w-64"
-            />
-          </div>
-
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-4 text-xs">
-              <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-emerald-950 border border-emerald-800"></span><span className="text-emerald-400 font-bold">Ledig</span></div>
-              <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-amber-500"></span><span className="text-amber-400 font-bold">Valgt</span></div>
-              <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-rose-950 border border-rose-800"></span><span className="text-rose-400">Opptatt</span></div>
+        {/* BRUKER / VIPPS BOKS */}
+        <div className="bg-[#0f172a] p-4 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+            <div className="w-full sm:w-auto">
+              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Ditt Navn:</label>
+              <input 
+                type="text" 
+                placeholder="Skriv navnet ditt her..." 
+                value={buyerName}
+                onChange={(e) => setBuyerName(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+              />
             </div>
 
-            <div className="text-right">
-              <p className="text-xs text-slate-400">Valgt totalt på tvers av uker:</p>
-              <p className="text-lg font-black text-amber-400">{totalSelectedCount} lodd ({totalSelectedCount * TICKET_PRICE} kr)</p>
-            </div>
+            <div className="flex justify-between sm:justify-end items-center gap-3 pt-1 sm:pt-0">
+              <div className="text-left sm:text-right">
+                <p className="text-[10px] text-slate-400">Valgt totalt:</p>
+                <p className="text-sm sm:text-base font-black text-amber-400">{totalSelectedCount} lodd ({totalSelectedCount * TICKET_PRICE} kr)</p>
+              </div>
 
-            <button 
-              onClick={handleProceedToVipps}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-3 rounded-xl transition transform active:scale-95 shadow-lg text-sm"
-            >
-              Registrer & Vipps ➔
-            </button>
+              <button 
+                onClick={handleProceedToVipps}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2.5 rounded-xl transition shadow-lg text-xs sm:text-sm whitespace-nowrap"
+              >
+                Vipps ➔
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="bg-[#0f172a] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-          <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-            <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-              <span>🎟️ Lodd rutenett for</span>
+        {/* LODD RUTENETT (OPTIMALISERT FOR MOBIL MED 5 KOLONNER) */}
+        <div className="bg-[#0f172a] p-4 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+          <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center space-x-1">
+              <span>🎟️ Lodd for</span>
               <span className="text-amber-400 font-extrabold">{activeWeek}</span>
             </h2>
-            <p className="text-xs text-slate-400">Klikk på ledige ruter for å velge/avvelge lodd i denne uken</p>
+            <div className="flex items-center space-x-2 text-[10px]">
+              <span className="text-emerald-400">🟢 Ledig</span>
+              <span className="text-amber-400">🟡 Valgt</span>
+              <span className="text-rose-400">🔴 Solgt</span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-3">
+          <div className="grid grid-cols-5 sm:grid-cols-9 gap-1.5 sm:gap-2.5">
             {Array.from({ length: MAX_TICKETS }, (_, i) => i + 1).map(num => {
               const owner = getTicketOwner(activeWeek, num);
               const isSelectedByMe = (selectedTickets[activeWeek] || []).includes(num);
 
-              let boxStyle = "bg-emerald-950/40 border-emerald-800/80 text-emerald-400 hover:border-emerald-500 hover:bg-emerald-900/50";
+              let boxStyle = "bg-emerald-950/40 border-emerald-800/80 text-emerald-400 hover:border-emerald-500";
               if (owner) {
                 boxStyle = "bg-rose-950/30 border-rose-900/50 text-rose-300 cursor-not-allowed";
               } else if (isSelectedByMe) {
-                boxStyle = "bg-amber-500 border-amber-400 text-slate-950 font-black shadow-lg shadow-amber-500/20 scale-105";
+                boxStyle = "bg-amber-500 border-amber-400 text-slate-950 font-black shadow-md scale-105";
               }
 
               return (
                 <button
                   key={num}
                   onClick={() => handleTicketClick(num)}
-                  className={`h-24 rounded-2xl border p-3 flex flex-col justify-between items-start transition ${boxStyle}`}
+                  className={`h-16 sm:h-20 rounded-xl border p-1.5 flex flex-col justify-between items-start transition ${boxStyle}`}
                 >
-                  <span className="text-lg font-black">#{num}</span>
-                  <span className="text-[11px] truncate w-full text-left font-medium opacity-80">
-                    {owner ? owner : isSelectedByMe ? "Valgt av deg" : "Ledig"}
+                  <span className="text-xs sm:text-base font-black">#{num}</span>
+                  <span className="text-[9px] sm:text-[11px] truncate w-full text-left font-medium opacity-90">
+                    {owner ? owner : isSelectedByMe ? "Valgt" : "Ledig"}
                   </span>
                 </button>
               );
@@ -728,45 +717,25 @@ export default function App() {
 
       {/* RIS & ROS MODAL */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-lg shadow-2xl space-y-5">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h2 className="text-xl font-black text-amber-400 flex items-center space-x-2">
-                <span>💬 Ris & Ros</span>
-              </h2>
-              <button 
-                onClick={() => setShowFeedbackModal(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs"
-              >
-                Lukk ✖
-              </button>
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/30 p-5 rounded-2xl w-full max-w-lg shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <h2 className="text-base font-black text-amber-400">💬 Ris & Ros</h2>
+              <button onClick={() => setShowFeedbackModal(false)} className="bg-slate-800 text-slate-300 font-bold px-3 py-1 rounded-xl text-xs">Lukk ✖</button>
             </div>
 
-            <form onSubmit={handleAddFeedback} className="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
-              <p className="text-xs text-slate-400">
-                Aktiv bruker: <strong className="text-amber-400">{buyerName ? buyerName : "(Skriv navnet ditt øverst i appen)"}</strong>
-              </p>
-              <textarea 
-                rows="2"
-                placeholder="Skriv en ros eller litt ris her..."
-                value={newFeedbackText}
-                onChange={(e) => setNewFeedbackText(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
-              ></textarea>
-              <button 
-                type="submit"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl text-xs transition shadow-md"
-              >
-                Send kommentar 💬
-              </button>
+            <form onSubmit={handleAddFeedback} className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <p className="text-[11px] text-slate-400">Navn: <strong className="text-amber-400">{buyerName ? buyerName : "(Skriv navnet ditt øverst)"}</strong></p>
+              <textarea rows="2" placeholder="Skriv din kommentar..." value={newFeedbackText} onChange={(e) => setNewFeedbackText(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"></textarea>
+              <button type="submit" className="w-full bg-amber-500 text-slate-950 font-black py-2 rounded-xl text-xs shadow-md">Send kommentar 💬</button>
             </form>
 
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
               {feedbackList.map(item => (
-                <div key={item.id} className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-xl space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-amber-400">{item.name}</span>
-                    <span className="text-[10px] text-slate-500">{item.date}</span>
+                <div key={item.id} className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl space-y-0.5">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="font-bold text-amber-400">{item.name}</span>
+                    <span className="text-slate-500">{item.date}</span>
                   </div>
                   <p className="text-xs text-slate-200 italic">"{item.text}"</p>
                 </div>
@@ -779,146 +748,75 @@ export default function App() {
       {/* QR-KODE MODAL */}
       {showQRModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-3xl w-full max-w-sm text-center space-y-4 shadow-2xl">
-            <h2 className="text-xl font-black text-amber-400">📱 Scan for Vinlotteriet</h2>
-            <p className="text-xs text-slate-300">Scan koden med mobilen for å åpne appen direkte!</p>
-            <div className="bg-white p-4 rounded-2xl inline-block shadow-inner">
-              <img src="./qr.jpg" alt="QR Kode Vinlotteriet" className="w-56 h-56 mx-auto object-contain" />
+          <div className="bg-[#0f172a] border border-amber-500/40 p-5 rounded-3xl w-full max-w-xs text-center space-y-3 shadow-2xl">
+            <h2 className="text-lg font-black text-amber-400">📱 Scan Koden</h2>
+            <div className="bg-white p-3 rounded-2xl inline-block shadow-inner">
+              <img src="./qr.jpg" alt="QR Kode" className="w-48 h-48 mx-auto object-contain" />
             </div>
-            <button 
-              onClick={() => setShowQRModal(false)}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 py-2.5 rounded-xl text-xs w-full transition"
-            >
-              Lukk ✖
-            </button>
+            <button onClick={() => setShowQRModal(false)} className="bg-slate-800 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs w-full">Lukk ✖</button>
           </div>
         </div>
       )}
 
-      {/* REVEAL-MODAL MED DIN EGEN LYDFIL */}
+      {/* REVEAL-MODAL */}
       {revealModal.show && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border-4 border-amber-400 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.3)]">
-            
-            <div className="text-5xl">🍷</div>
-            
+          <div className="bg-[#0f172a] border-2 sm:border-4 border-amber-400 p-6 sm:p-8 rounded-3xl w-full max-w-md text-center space-y-4 shadow-2xl">
+            <div className="text-4xl sm:text-5xl">🍷</div>
             {revealModal.stage === "drumroll" ? (
-              <div className="space-y-4">
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
-                  LODD #{revealModal.ticket} TRUKKET FOR FLASKE {revealModal.bottle}!
-                </span>
-                <h2 className="text-3xl font-black text-white italic">Og vinneren er...</h2>
-                <p className="text-xs text-slate-400 italic">Lytt etter navnet...</p>
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">LODD #{revealModal.ticket} TRUKKET!</span>
+                <h2 className="text-2xl sm:text-3xl font-black text-white italic">Og vinneren er...</h2>
               </div>
             ) : (
-              <div className="space-y-4">
-                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
-                  🎉 VINNER FLASKE {revealModal.bottle} 🎉
-                </span>
-                
-                <div className="py-4 bg-slate-950/80 border border-amber-500/40 rounded-2xl shadow-inner">
-                  <h2 className="text-4xl md:text-5xl font-black text-amber-300 drop-shadow-[0_0_15px_rgba(252,211,77,0.8)] tracking-tight">
-                    {revealModal.name}
-                  </h2>
+              <div className="space-y-3">
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">🎉 VINNER FLASKE {revealModal.bottle} 🎉</span>
+                <div className="py-3 bg-slate-950/80 border border-amber-500/40 rounded-2xl shadow-inner">
+                  <h2 className="text-3xl sm:text-5xl font-black text-amber-300 tracking-tight">{revealModal.name}</h2>
                 </div>
-
-                <p className="text-sm font-bold text-slate-200">Lodd #{revealModal.ticket} i {activeWeek}</p>
-                
-                <button 
-                  onClick={() => setRevealModal({ ...revealModal, show: false })}
-                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-8 py-3 rounded-xl text-xs mt-4 shadow-lg transform active:scale-95 transition"
-                >
-                  Fortsett ➔
-                </button>
+                <p className="text-xs font-bold text-slate-200">Lodd #{revealModal.ticket} i {activeWeek}</p>
+                <button onClick={() => setRevealModal({ ...revealModal, show: false })} className="bg-amber-500 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs shadow-lg">Fortsett ➔</button>
               </div>
             )}
-
           </div>
         </div>
       )}
 
       {/* UKENS PREMIE MODAL */}
       {showPrizeModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-2xl shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/30 p-5 rounded-2xl w-full max-w-xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
               <div>
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">{activeWeek}</span>
-                <h2 className="text-2xl font-black text-white">{currentPrize.title || "2 Flasker Vin"}</h2>
+                <span className="text-[10px] font-bold text-amber-400 uppercase">{activeWeek}</span>
+                <h2 className="text-lg font-black text-white">{currentPrize.title || "2 Flasker Vin"}</h2>
               </div>
-              <button 
-                onClick={() => setShowPrizeModal(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs"
-              >
-                Lukk ✖
-              </button>
+              <button onClick={() => setShowPrizeModal(false)} className="bg-slate-800 text-slate-300 font-bold px-3 py-1 rounded-xl text-xs">Lukk ✖</button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-xs font-bold text-amber-400 text-center uppercase">🍾 Flaske 1</p>
-                <div className="h-60 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
-                  {currentPrize.image1 ? (
-                    <img src={currentPrize.image1} alt="Flaske 1" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-slate-600 text-sm">Ingen bilde av flaske 1</div>
-                  )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-amber-400 text-center uppercase">Flaske 1</p>
+                <div className="h-40 sm:h-52 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
+                  {currentPrize.image1 ? <img src={currentPrize.image1} alt="Flaske 1" className="w-full h-full object-cover" /> : <div className="text-slate-600 text-xs">Ingen bilde</div>}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-xs font-bold text-amber-400 text-center uppercase">🍾 Flaske 2</p>
-                <div className="h-60 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
-                  {currentPrize.image2 ? (
-                    <img src={currentPrize.image2} alt="Flaske 2" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-slate-600 text-sm">Ingen bilde av flaske 2</div>
-                  )}
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-amber-400 text-center uppercase">Flaske 2</p>
+                <div className="h-40 sm:h-52 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
+                  {currentPrize.image2 ? <img src={currentPrize.image2} alt="Flaske 2" className="w-full h-full object-cover" /> : <div className="text-slate-600 text-xs">Ingen bilde</div>}
                 </div>
               </div>
             </div>
 
             {isAdminUnlocked && (
-              <div className="p-4 bg-slate-950 border border-amber-500/40 rounded-xl space-y-4">
-                <p className="text-xs font-black text-amber-400 uppercase flex items-center space-x-1">
-                  <span>📸 Admin: Ta bilde eller velg fil ({activeWeek})</span>
-                </p>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[11px] text-slate-400 font-bold block mb-1">Premietittel:</label>
-                    <input 
-                      type="text" 
-                      placeholder="F.eks. 2 Flasker Marques de Chive..." 
-                      value={currentPrize.title || ""} 
-                      onChange={(e) => updatePrize(activeWeek, "title", e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-1">
-                      <span className="text-[10px] font-bold text-slate-300 block">📷 Ta bilde av Flaske 1:</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        capture="environment"
-                        onChange={(e) => handleImageUpload(activeWeek, "image1", e.target.files[0])}
-                        className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-600 cursor-pointer w-full"
-                      />
-                    </div>
-
-                    <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-1">
-                      <span className="text-[10px] font-bold text-slate-300 block">📷 Ta bilde av Flaske 2:</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        capture="environment"
-                        onChange={(e) => handleImageUpload(activeWeek, "image2", e.target.files[0])}
-                        className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-600 cursor-pointer w-full"
-                      />
-                    </div>
-                  </div>
+              <div className="p-3 bg-slate-950 border border-amber-500/40 rounded-xl space-y-3 text-xs">
+                <p className="font-black text-amber-400 uppercase">📸 Admin: Ta bilde ({activeWeek})</p>
+                <input type="text" placeholder="Premietittel..." value={currentPrize.title || ""} onChange={(e) => updatePrize(activeWeek, "title", e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white" />
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="file" accept="image/*" capture="environment" onChange={(e) => handleImageUpload(activeWeek, "image1", e.target.files[0])} className="text-[10px] text-slate-400" />
+                  <input type="file" accept="image/*" capture="environment" onChange={(e) => handleImageUpload(activeWeek, "image2", e.target.files[0])} className="text-[10px] text-slate-400" />
                 </div>
               </div>
             )}
@@ -928,43 +826,27 @@ export default function App() {
 
       {/* VINNERE MODAL */}
       {showWinnersModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-xl shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h2 className="text-2xl font-black text-amber-400 flex items-center space-x-2">
-                <span>🏆 Vinneroversikt (Uke 45–51)</span>
-              </h2>
-              <button 
-                onClick={() => setShowWinnersModal(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs"
-              >
-                Lukk ✖
-              </button>
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/30 p-5 rounded-2xl w-full max-w-lg shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <h2 className="text-lg font-black text-amber-400">🏆 Vinnere (Uke 45–51)</h2>
+              <button onClick={() => setShowWinnersModal(false)} className="bg-slate-800 text-slate-300 font-bold px-3 py-1 rounded-xl text-xs">Lukk ✖</button>
             </div>
 
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {weeksList.map(week => {
                 const prize = prizes[week] || {};
                 return (
-                  <div key={week} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div key={week} className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
                     <div>
-                      <span className="text-xs font-black text-amber-400 uppercase">{week}</span>
-                      <p className="text-sm font-bold text-white">{prize.title || "2 Flasker Vin"}</p>
+                      <span className="font-black text-amber-400 uppercase block text-[10px]">{week}</span>
+                      <p className="font-bold text-white text-xs">{prize.title || "2 Flasker Vin"}</p>
                     </div>
-
-                    <div className="flex-1 sm:text-right">
+                    <div className="text-right">
                       {isAdminUnlocked ? (
-                        <input 
-                          type="text" 
-                          placeholder="Skriv inn vinner..." 
-                          value={prize.winner || ""} 
-                          onChange={(e) => updatePrize(week, "winner", e.target.value)}
-                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-400 font-bold w-full sm:w-64 text-left sm:text-right"
-                        />
+                        <input type="text" placeholder="Vinner..." value={prize.winner || ""} onChange={(e) => updatePrize(week, "winner", e.target.value)} className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-emerald-400 font-bold w-32" />
                       ) : (
-                        <p className={`text-sm font-black ${prize.winner ? 'text-emerald-400' : 'text-slate-600 italic'}`}>
-                          {prize.winner ? `🎉 ${prize.winner}` : "Ikke trukket"}
-                        </p>
+                        <p className={`font-black ${prize.winner ? 'text-emerald-400' : 'text-slate-600 italic'}`}>{prize.winner ? `🎉 ${prize.winner}` : "Ikke trukket"}</p>
                       )}
                     </div>
                   </div>
@@ -978,32 +860,14 @@ export default function App() {
       {/* ADMIN MODAL */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl">
-            <h2 className="text-xl font-bold text-amber-400 mb-1">🔒 Admin Innlogging</h2>
-            <p className="text-slate-400 text-xs mb-4">Oppgi adminkoden for å åpne trekningsfunksjonen.</p>
+          <div className="bg-[#0f172a] border border-slate-800 p-5 rounded-2xl w-full max-w-xs shadow-2xl space-y-3">
+            <h2 className="text-base font-bold text-amber-400 text-center">🔒 Admin Innlogging</h2>
             <form onSubmit={handleAdminUnlock} className="space-y-3">
-              <input 
-                type="password"
-                placeholder="Skriv inn adminkode..."
-                value={adminPasswordInput}
-                onChange={(e) => setAdminPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white text-center font-mono focus:outline-none focus:border-amber-500"
-              />
+              <input type="password" placeholder="Adminkode..." value={adminPasswordInput} onChange={(e) => setAdminPasswordInput(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-center font-mono text-sm focus:outline-none focus:border-amber-500" />
               {adminError && <p className="text-rose-400 text-xs text-center">{adminError}</p>}
-              <div className="flex space-x-3 pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAdminModal(false)}
-                  className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs"
-                >
-                  Avbryt
-                </button>
-                <button 
-                  type="submit" 
-                  className="w-1/2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-md"
-                >
-                  Lås opp
-                </button>
+              <div className="flex space-x-2">
+                <button type="button" onClick={() => setShowAdminModal(false)} className="w-1/2 bg-slate-800 text-slate-300 font-bold py-2 rounded-xl text-xs">Avbryt</button>
+                <button type="submit" className="w-1/2 bg-amber-500 text-slate-950 font-black py-2 rounded-xl text-xs shadow-md">Lås opp</button>
               </div>
             </form>
           </div>
@@ -1013,38 +877,28 @@ export default function App() {
       {/* VIPPS MODAL */}
       {showVippsModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
-            <div className="text-4xl mb-2">📱</div>
-            <h2 className="text-2xl font-black text-amber-400 mb-1">Husk å Vippse!</h2>
-            <p className="text-slate-300 text-sm mb-4">
-              Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
-              Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
+          <div className="bg-[#0f172a] border border-amber-500/40 p-5 rounded-2xl w-full max-w-xs shadow-2xl text-center space-y-3">
+            <div className="text-3xl">📱</div>
+            <h2 className="text-lg font-black text-amber-400">Husk å Vippse!</h2>
+            <p className="text-slate-300 text-xs">
+              Reserverer <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
+              Sum: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
             </p>
 
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-left text-[11px] text-slate-300 space-y-1">
               <p className="font-bold text-amber-400">Slik gjør du det:</p>
-              <p>1. Åpne Vipps-appen på mobilen din.</p>
-              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
-              <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
+              <p>1. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong> i Vipps.</p>
+              <p>2. Trykk bekreft under.</p>
             </div>
 
-            <div className="flex space-x-3">
-              <button 
-                onClick={() => setShowVippsModal(false)}
-                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-xs transition"
-              >
-                Avbryt
-              </button>
-              <button 
-                onClick={confirmPurchase}
-                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg"
-              >
-                Ja, jeg har Vippset!
-              </button>
+            <div className="flex space-x-2">
+              <button onClick={() => setShowVippsModal(false)} className="w-1/2 bg-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-xs">Avbryt</button>
+              <button onClick={confirmPurchase} className="w-1/2 bg-emerald-500 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg">Vippset!</button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
