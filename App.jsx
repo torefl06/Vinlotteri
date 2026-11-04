@@ -359,4 +359,4 @@ export default function App() {
 
             <div className="text-right">
               <p className="text-xs text-slate-400">Valgt totalt på tvers av uker:</p>
-              <p className="text-lg font-black text-amber-400">{totalSelectedCount} lodd
+              <p className="text-lg font-black text-amber-400">{totalSelectedCount} lodd     
