@@ -251,10 +251,14 @@ export default function App() {
   const [showQRModal, setShowQRModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showBuyTipsModal, setShowBuyTipsModal] = useState(false);
+  const [showRegnskapAuthModal, setShowRegnskapAuthModal] = useState(false);
   
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
+  const [regnskapPasswordInput, setRegnskapPasswordInput] = useState("");
   const [adminError, setAdminError] = useState("");
+  const [regnskapError, setRegnskapError] = useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [isRegnskapUnlocked, setIsRegnskapUnlocked] = useState(false);
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [slotDisplay, setSlotDisplay] = useState({ tens: "0", ones: "0" });
@@ -476,6 +480,18 @@ export default function App() {
     }
   };
 
+  const handleRegnskapUnlock = (e) => {
+    e.preventDefault();
+    if (regnskapPasswordInput === "vinlotteri26") {
+      setIsRegnskapUnlocked(true);
+      setShowRegnskapAuthModal(false);
+      setRegnskapPasswordInput("");
+      setRegnskapError("");
+    } else {
+      setRegnskapError("Feil kode. Prøv igjen.");
+    }
+  };
+
   const soldTicketsInActiveWeek = Object.entries(currentWeekData).flatMap(([name, tickets]) => 
     Array.isArray(tickets) ? tickets.map(t => ({ ticketNum: t, owner: name })) : []
   );
@@ -660,8 +676,12 @@ export default function App() {
 
           <button 
             onClick={() => {
-              if (isAdminUnlocked) setIsAdminUnlocked(false);
-              else setShowAdminModal(true);
+              if (isAdminUnlocked) {
+                setIsAdminUnlocked(false);
+                setIsRegnskapUnlocked(false);
+              } else {
+                setShowAdminModal(true);
+              }
             }}
             className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold px-2.5 py-1.5 rounded-xl text-slate-300 whitespace-nowrap"
           >
@@ -758,92 +778,117 @@ export default function App() {
               </div>
             </div>
 
-            {/* 2. REKNSKAP OG BALANSE */}
+            {/* 2. REKNSKAP OG BALANSE (SKJULT BAK KODE) */}
             <div className="bg-[#0f172a] border-2 border-slate-700 p-4 sm:p-6 rounded-2xl shadow-xl space-y-4">
               <div className="border-b border-slate-800 pb-2 flex justify-between items-center">
                 <h2 className="text-base font-black text-amber-400 flex items-center space-x-2">
-                  <span>📊 Regnskap & Økonomi (Totalt)</span>
+                  <span>📊 Regnskap & Økonomi</span>
                 </h2>
-                <span className="text-[10px] text-slate-400">Automatisk oppdatert</span>
+                {isRegnskapUnlocked && (
+                  <button 
+                    onClick={() => setIsRegnskapUnlocked(false)} 
+                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-lg border border-slate-700 font-bold"
+                  >
+                    🔒 Skjul regnskap
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                {/* INNTEKTER PR PERSON */}
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                  <p className="text-xs font-bold text-emerald-400 uppercase flex justify-between">
-                    <span>💵 Innbetalinger pr. person:</span>
+              {!isRegnskapUnlocked ? (
+                <div className="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-3">
+                  <div className="text-3xl">🔒</div>
+                  <h3 className="text-sm font-bold text-white">Regnskapet er skjult under trekning</h3>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    Trykk på knappen under og oppgi adminkoden for å se inntekter, utgifter og balanse.
                   </p>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs">
-                    {Object.entries(personTotals).length > 0 ? (
-                      Object.entries(personTotals).map(([person, amount]) => (
-                        <div key={person} className="flex justify-between items-center border-b border-slate-900 pb-1">
-                          <span className="text-slate-200 font-medium">{person}</span>
-                          <span className="font-mono font-bold text-emerald-400">{amount} kr</span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-slate-600 italic">Ingen lodd solgt ennå.</p>
-                    )}
-                  </div>
-                  <div className="pt-2 border-t border-slate-800 flex justify-between font-black text-xs text-white">
-                    <span>Totalt innbetalt:</span>
-                    <span className="text-emerald-400 font-mono">{totalRevenue} kr</span>
-                  </div>
+                  <button 
+                    onClick={() => setShowRegnskapAuthModal(true)}
+                    className="bg-rose-600 hover:bg-rose-500 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow-lg transition"
+                  >
+                    🔐 Åpne Regnskap & Økonomi
+                  </button>
                 </div>
-
-                {/* KJØP AV PREMIER (UTGIFTER) */}
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3">
-                  <p className="text-xs font-bold text-rose-400 uppercase">🛍️ Innkjøp av premier (Utgifter):</p>
-                  
-                  <form onSubmit={handleAddExpense} className="flex gap-2">
-                    <input 
-                      type="text" 
-                      placeholder="F.eks. 3 flasker" 
-                      value={expenseText}
-                      onChange={(e) => setExpenseText(e.target.value)}
-                      className="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-                    />
-                    <input 
-                      type="number" 
-                      placeholder="Kr" 
-                      value={expenseAmount}
-                      onChange={(e) => setExpenseAmount(e.target.value)}
-                      className="w-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white font-mono"
-                    />
-                    <button type="submit" className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-2 rounded-lg text-xs">+</button>
-                  </form>
-
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 text-xs">
-                    {expenses.map(exp => (
-                      <div key={exp.id} className="flex justify-between items-center border-b border-slate-900 pb-1">
-                        <span className="text-slate-300">{exp.text}</span>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-mono font-bold text-rose-400">{exp.amount} kr</span>
-                          <button onClick={() => handleDeleteExpense(exp.id)} className="text-slate-600 hover:text-rose-400 font-bold">✖</button>
-                        </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* INNTEKTER PR PERSON */}
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                      <p className="text-xs font-bold text-emerald-400 uppercase flex justify-between">
+                        <span>💵 Innbetalinger pr. person:</span>
+                      </p>
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs">
+                        {Object.entries(personTotals).length > 0 ? (
+                          Object.entries(personTotals).map(([person, amount]) => (
+                            <div key={person} className="flex justify-between items-center border-b border-slate-900 pb-1">
+                              <span className="text-slate-200 font-medium">{person}</span>
+                              <span className="font-mono font-bold text-emerald-400">{amount} kr</span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-slate-600 italic">Ingen lodd solgt ennå.</p>
+                        )}
                       </div>
-                    ))}
+                      <div className="pt-2 border-t border-slate-800 flex justify-between font-black text-xs text-white">
+                        <span>Totalt innbetalt:</span>
+                        <span className="text-emerald-400 font-mono">{totalRevenue} kr</span>
+                      </div>
+                    </div>
+
+                    {/* KJØP AV PREMIER (UTGIFTER) */}
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                      <p className="text-xs font-bold text-rose-400 uppercase">🛍️ Innkjøp av premier (Utgifter):</p>
+                      
+                      <form onSubmit={handleAddExpense} className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="F.eks. 3 flasker" 
+                          value={expenseText}
+                          onChange={(e) => setExpenseText(e.target.value)}
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                        />
+                        <input 
+                          type="number" 
+                          placeholder="Kr" 
+                          value={expenseAmount}
+                          onChange={(e) => setExpenseAmount(e.target.value)}
+                          className="w-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white font-mono"
+                        />
+                        <button type="submit" className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-2 rounded-lg text-xs">+</button>
+                      </form>
+
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 text-xs">
+                        {expenses.map(exp => (
+                          <div key={exp.id} className="flex justify-between items-center border-b border-slate-900 pb-1">
+                            <span className="text-slate-300">{exp.text}</span>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-mono font-bold text-rose-400">{exp.amount} kr</span>
+                              <button onClick={() => handleDeleteExpense(exp.id)} className="text-slate-600 hover:text-rose-400 font-bold">✖</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800 flex justify-between font-black text-xs text-white">
+                        <span>Totalt brukt på premier:</span>
+                        <span className="text-rose-400 font-mono">{totalExpenses} kr</span>
+                      </div>
+                    </div>
+
                   </div>
 
-                  <div className="pt-2 border-t border-slate-800 flex justify-between font-black text-xs text-white">
-                    <span>Totalt brukt på premier:</span>
-                    <span className="text-rose-400 font-mono">{totalExpenses} kr</span>
+                  {/* ENDELIG BALANSE */}
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2">
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase">Status Økonomi / Balanse:</p>
+                      <p className="text-[11px] text-slate-500">Inntekter ({totalRevenue} kr) - Utgifter ({totalExpenses} kr)</p>
+                    </div>
+                    <div className={`text-xl font-black font-mono px-4 py-1.5 rounded-xl border ${netBalance >= 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-400' : 'bg-rose-950/60 border-rose-500 text-rose-400'}`}>
+                      {netBalance >= 0 ? `+${netBalance} kr (Overskudd)` : `${netBalance} kr (Underskudd)`}
+                    </div>
                   </div>
                 </div>
-
-              </div>
-
-              {/* ENDELIG BALANSE (OVERSKUDD / UNDERSKUDD) */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2">
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase">Status Økonomi / Balanse:</p>
-                  <p className="text-[11px] text-slate-500">Inntekter ({totalRevenue} kr) - Utgifter ({totalExpenses} kr)</p>
-                </div>
-                <div className={`text-xl font-black font-mono px-4 py-1.5 rounded-xl border ${netBalance >= 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-400' : 'bg-rose-950/60 border-rose-500 text-rose-400'}`}>
-                  {netBalance >= 0 ? `+${netBalance} kr (Overskudd)` : `${netBalance} kr (Underskudd)`}
-                </div>
-              </div>
+              )}
 
             </div>
 
@@ -923,6 +968,29 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* REGNSKAP AUTENTISERING MODAL */}
+      {showRegnskapAuthModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-slate-800 p-5 rounded-2xl w-full max-w-xs shadow-2xl space-y-3">
+            <h2 className="text-base font-bold text-amber-400 text-center">🔐 Lås opp regnskap</h2>
+            <form onSubmit={handleRegnskapUnlock} className="space-y-3">
+              <input 
+                type="password" 
+                placeholder="Skriv inn adminkode..." 
+                value={regnskapPasswordInput} 
+                onChange={(e) => setRegnskapPasswordInput(e.target.value)} 
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-center font-mono text-sm focus:outline-none focus:border-amber-500" 
+              />
+              {regnskapError && <p className="text-rose-400 text-xs text-center">{regnskapError}</p>}
+              <div className="flex space-x-2">
+                <button type="button" onClick={() => setShowRegnskapAuthModal(false)} className="w-1/2 bg-slate-800 text-slate-300 font-bold py-2 rounded-xl text-xs">Avbryt</button>
+                <button type="submit" className="w-1/2 bg-rose-600 text-white font-black py-2 rounded-xl text-xs shadow-md">Lås opp</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* KJØPETIPS MODAL */}
       {showBuyTipsModal && (
