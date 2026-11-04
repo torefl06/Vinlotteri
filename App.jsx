@@ -159,6 +159,10 @@ const initialBuyTips = [
   { id: 1, name: "Tore", tip: "Marqués de Chive Crianza", price: "130", date: "Standard" }
 ];
 
+const initialExpenses = [
+  { id: 1, text: "3 flasker tilsammen", amount: 650 }
+];
+
 const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
@@ -220,6 +224,15 @@ export default function App() {
     }
   });
 
+  const [expenses, setExpenses] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vinlotteri_expenses_v1');
+      return saved ? JSON.parse(saved) : initialExpenses;
+    } catch (e) {
+      return initialExpenses;
+    }
+  });
+
   const [activeWeek, setActiveWeek] = useState("Uke 45");
   const [buyerName, setBuyerName] = useState("");
   const [selectedTickets, setSelectedTickets] = useState({});
@@ -227,6 +240,9 @@ export default function App() {
   const [newFeedbackText, setNewFeedbackText] = useState("");
   const [newTipText, setNewTipText] = useState("");
   const [newTipPrice, setNewTipPrice] = useState("");
+
+  const [expenseText, setExpenseText] = useState("");
+  const [expenseAmount, setExpenseAmount] = useState("");
   
   const [showVippsModal, setShowVippsModal] = useState(false);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
@@ -278,6 +294,12 @@ export default function App() {
       localStorage.setItem('vinlotteri_buy_tips_v1', JSON.stringify(buyTipsList));
     } catch (e) {}
   }, [buyTipsList]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vinlotteri_expenses_v1', JSON.stringify(expenses));
+    } catch (e) {}
+  }, [expenses]);
 
   const getTicketOwner = (week, ticketNum) => {
     const weekObj = weeklyData[week] || {};
@@ -356,6 +378,40 @@ export default function App() {
     setNewTipPrice("");
   };
 
+  const handleAddExpense = (e) => {
+    e.preventDefault();
+    if (!expenseText.trim() || !expenseAmount) return;
+    const newExp = {
+      id: Date.now(),
+      text: expenseText.trim(),
+      amount: parseFloat(expenseAmount) || 0
+    };
+    setExpenses([...expenses, newExp]);
+    setExpenseText("");
+    setExpenseAmount("");
+  };
+
+  const handleDeleteExpense = (id) => {
+    setExpenses(expenses.filter(e => e.id !== id));
+  };
+
+  // REKNESKAP BEREGNINGER
+  const personTotals = {};
+  let totalRevenue = 0;
+
+  Object.values(weeklyData).forEach(weekObj => {
+    Object.entries(weekObj).forEach(([person, tickets]) => {
+      if (Array.isArray(tickets)) {
+        const cost = tickets.length * TICKET_PRICE;
+        personTotals[person] = (personTotals[person] || 0) + cost;
+        totalRevenue += cost;
+      }
+    });
+  });
+
+  const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const netBalance = totalRevenue - totalExpenses;
+
   const totalSelectedCount = Object.values(selectedTickets).reduce((acc, arr) => acc + (arr ? arr.length : 0), 0);
   const currentWeekData = weeklyData[activeWeek] || {};
   const soldCountInActiveWeek = Object.values(currentWeekData).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
@@ -395,10 +451,12 @@ export default function App() {
       setPrizes(defaultPrizes);
       setFeedbackList(initialFeedback);
       setBuyTipsList(initialBuyTips);
+      setExpenses(initialExpenses);
       localStorage.removeItem('vinlotteri_fixed_v4');
       localStorage.removeItem('vinlotteri_prizes_v3');
       localStorage.removeItem('vinlotteri_feedback_v1');
       localStorage.removeItem('vinlotteri_buy_tips_v1');
+      localStorage.removeItem('vinlotteri_expenses_v1');
       setTempWinner1(null);
       setTempWinner2(null);
       setShowConfirmDraw(false);
@@ -628,73 +686,167 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
 
-        {/* ADMIN TREKNING */}
+        {/* ADMIN SEKSJON: TREKNING OG REKNSKAP */}
         {isAdminUnlocked && (
-          <div className="bg-gradient-to-b from-amber-950/40 to-slate-900/90 border-2 border-amber-500/50 p-4 sm:p-6 rounded-2xl shadow-2xl space-y-4 sm:space-y-6">
-            <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
-              <h2 className="text-sm sm:text-lg font-black text-amber-400 flex items-center space-x-2">
-                <span>🎰 Trekning ({activeWeek})</span>
-              </h2>
-              <button onClick={resetToInitial} className="text-[10px] sm:text-xs bg-rose-950 text-rose-300 px-2 py-1 rounded-lg border border-rose-800 font-bold">
-                🔄 Tilbakestill
-              </button>
-            </div>
+          <div className="space-y-4 sm:space-y-6">
             
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="bg-slate-950 border-2 sm:border-4 border-amber-500/80 p-4 sm:p-6 rounded-2xl shadow-2xl flex items-center space-x-4 relative">
-                <div className="w-16 h-22 sm:w-20 sm:h-28 bg-black border border-slate-800 rounded-xl flex items-center justify-center">
-                  <span className={`text-4xl sm:text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
-                    {slotDisplay.tens}
-                  </span>
-                </div>
-
-                <div className="w-16 h-22 sm:w-20 sm:h-28 bg-black border border-slate-800 rounded-xl flex items-center justify-center">
-                  <span className={`text-4xl sm:text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
-                    {slotDisplay.ones}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 sm:gap-4 justify-center w-full">
-                <button 
-                  onClick={() => startSlotMachine(1)}
-                  disabled={isSpinning}
-                  className={`flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-lg ${isSpinning ? 'opacity-50' : ''}`}
-                >
-                  🍾 FLASKE 1
-                </button>
-
-                <button 
-                  onClick={() => startSlotMachine(2)}
-                  disabled={isSpinning || !tempWinner1}
-                  className={`flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-lg ${(!tempWinner1 || isSpinning) ? 'opacity-40 cursor-not-allowed' : ''}`}
-                >
-                  🍾 FLASKE 2
+            {/* 1. TREKNING */}
+            <div className="bg-gradient-to-b from-amber-950/40 to-slate-900/90 border-2 border-amber-500/50 p-4 sm:p-6 rounded-2xl shadow-2xl space-y-4 sm:space-y-6">
+              <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
+                <h2 className="text-sm sm:text-lg font-black text-amber-400 flex items-center space-x-2">
+                  <span>🎰 Trekning ({activeWeek})</span>
+                </h2>
+                <button onClick={resetToInitial} className="text-[10px] sm:text-xs bg-rose-950 text-rose-300 px-2 py-1 rounded-lg border border-rose-800 font-bold">
+                  🔄 Tilbakestill alt
                 </button>
               </div>
+              
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="bg-slate-950 border-2 sm:border-4 border-amber-500/80 p-4 sm:p-6 rounded-2xl shadow-2xl flex items-center space-x-4 relative">
+                  <div className="w-16 h-22 sm:w-20 sm:h-28 bg-black border border-slate-800 rounded-xl flex items-center justify-center">
+                    <span className={`text-4xl sm:text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
+                      {slotDisplay.tens}
+                    </span>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-2 w-full text-xs">
-                <div className={`p-2.5 rounded-xl border text-center ${tempWinner1 ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-950/50 border-slate-800'}`}>
-                  <p className="text-[10px] font-bold text-amber-400 uppercase">Flaske 1:</p>
-                  <p className="font-extrabold text-white truncate">{tempWinner1 ? `${tempWinner1.owner} (#${tempWinner1.ticketNum})` : "-"}</p>
-                </div>
-
-                <div className={`p-2.5 rounded-xl border text-center ${tempWinner2 ? 'bg-emerald-950/40 border-emerald-500' : 'bg-slate-950/50 border-slate-800'}`}>
-                  <p className="text-[10px] font-bold text-emerald-400 uppercase">Flaske 2:</p>
-                  <p className="font-extrabold text-white truncate">{tempWinner2 ? `${tempWinner2.owner} (#${tempWinner2.ticketNum})` : "-"}</p>
-                </div>
-              </div>
-
-              {showConfirmDraw && tempWinner1 && tempWinner2 && (
-                <div className="bg-amber-950/80 border-2 border-amber-400 p-4 rounded-2xl text-center space-y-2 w-full shadow-2xl">
-                  <h3 className="text-sm font-black text-amber-300">Godkjenn trekning for {activeWeek}?</h3>
-                  <div className="flex justify-center space-x-2 pt-1">
-                    <button onClick={() => { setTempWinner1(null); setTempWinner2(null); setShowConfirmDraw(false); }} className="bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-xl text-xs">Omkamp</button>
-                    <button onClick={saveFinalWinners} className="bg-emerald-500 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs shadow-lg">✅ Godkjenn</button>
+                  <div className="w-16 h-22 sm:w-20 sm:h-28 bg-black border border-slate-800 rounded-xl flex items-center justify-center">
+                    <span className={`text-4xl sm:text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
+                      {slotDisplay.ones}
+                    </span>
                   </div>
                 </div>
-              )}
+
+                <div className="flex flex-wrap gap-2 sm:gap-4 justify-center w-full">
+                  <button 
+                    onClick={() => startSlotMachine(1)}
+                    disabled={isSpinning}
+                    className={`flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-lg ${isSpinning ? 'opacity-50' : ''}`}
+                  >
+                    🍾 FLASKE 1
+                  </button>
+
+                  <button 
+                    onClick={() => startSlotMachine(2)}
+                    disabled={isSpinning || !tempWinner1}
+                    className={`flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-lg ${(!tempWinner1 || isSpinning) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  >
+                    🍾 FLASKE 2
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 w-full text-xs">
+                  <div className={`p-2.5 rounded-xl border text-center ${tempWinner1 ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-950/50 border-slate-800'}`}>
+                    <p className="text-[10px] font-bold text-amber-400 uppercase">Flaske 1:</p>
+                    <p className="font-extrabold text-white truncate">{tempWinner1 ? `${tempWinner1.owner} (#${tempWinner1.ticketNum})` : "-"}</p>
+                  </div>
+
+                  <div className={`p-2.5 rounded-xl border text-center ${tempWinner2 ? 'bg-emerald-950/40 border-emerald-500' : 'bg-slate-950/50 border-slate-800'}`}>
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase">Flaske 2:</p>
+                    <p className="font-extrabold text-white truncate">{tempWinner2 ? `${tempWinner2.owner} (#${tempWinner2.ticketNum})` : "-"}</p>
+                  </div>
+                </div>
+
+                {showConfirmDraw && tempWinner1 && tempWinner2 && (
+                  <div className="bg-amber-950/80 border-2 border-amber-400 p-4 rounded-2xl text-center space-y-2 w-full shadow-2xl">
+                    <h3 className="text-sm font-black text-amber-300">Godkjenn trekning for {activeWeek}?</h3>
+                    <div className="flex justify-center space-x-2 pt-1">
+                      <button onClick={() => { setTempWinner1(null); setTempWinner2(null); setShowConfirmDraw(false); }} className="bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-xl text-xs">Omkamp</button>
+                      <button onClick={saveFinalWinners} className="bg-emerald-500 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs shadow-lg">✅ Godkjenn</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* 2. REKNSKAP OG BALANSE */}
+            <div className="bg-[#0f172a] border-2 border-slate-700 p-4 sm:p-6 rounded-2xl shadow-xl space-y-4">
+              <div className="border-b border-slate-800 pb-2 flex justify-between items-center">
+                <h2 className="text-base font-black text-amber-400 flex items-center space-x-2">
+                  <span>📊 Regnskap & Økonomi (Totalt)</span>
+                </h2>
+                <span className="text-[10px] text-slate-400">Automatisk oppdatert</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* INNTEKTER PR PERSON */}
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                  <p className="text-xs font-bold text-emerald-400 uppercase flex justify-between">
+                    <span>💵 Innbetalinger pr. person:</span>
+                  </p>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs">
+                    {Object.entries(personTotals).length > 0 ? (
+                      Object.entries(personTotals).map(([person, amount]) => (
+                        <div key={person} className="flex justify-between items-center border-b border-slate-900 pb-1">
+                          <span className="text-slate-200 font-medium">{person}</span>
+                          <span className="font-mono font-bold text-emerald-400">{amount} kr</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-slate-600 italic">Ingen lodd solgt ennå.</p>
+                    )}
+                  </div>
+                  <div className="pt-2 border-t border-slate-800 flex justify-between font-black text-xs text-white">
+                    <span>Totalt innbetalt:</span>
+                    <span className="text-emerald-400 font-mono">{totalRevenue} kr</span>
+                  </div>
+                </div>
+
+                {/* KJØP AV PREMIER (UTGIFTER) */}
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                  <p className="text-xs font-bold text-rose-400 uppercase">🛍️ Innkjøp av premier (Utgifter):</p>
+                  
+                  <form onSubmit={handleAddExpense} className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="F.eks. 3 flasker" 
+                      value={expenseText}
+                      onChange={(e) => setExpenseText(e.target.value)}
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                    />
+                    <input 
+                      type="number" 
+                      placeholder="Kr" 
+                      value={expenseAmount}
+                      onChange={(e) => setExpenseAmount(e.target.value)}
+                      className="w-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white font-mono"
+                    />
+                    <button type="submit" className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-2 rounded-lg text-xs">+</button>
+                  </form>
+
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 text-xs">
+                    {expenses.map(exp => (
+                      <div key={exp.id} className="flex justify-between items-center border-b border-slate-900 pb-1">
+                        <span className="text-slate-300">{exp.text}</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono font-bold text-rose-400">{exp.amount} kr</span>
+                          <button onClick={() => handleDeleteExpense(exp.id)} className="text-slate-600 hover:text-rose-400 font-bold">✖</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800 flex justify-between font-black text-xs text-white">
+                    <span>Totalt brukt på premier:</span>
+                    <span className="text-rose-400 font-mono">{totalExpenses} kr</span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ENDELIG BALANSE (OVERSKUDD / UNDERSKUDD) */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2">
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Status Økonomi / Balanse:</p>
+                  <p className="text-[11px] text-slate-500">Inntekter ({totalRevenue} kr) - Utgifter ({totalExpenses} kr)</p>
+                </div>
+                <div className={`text-xl font-black font-mono px-4 py-1.5 rounded-xl border ${netBalance >= 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-400' : 'bg-rose-950/60 border-rose-500 text-rose-400'}`}>
+                  {netBalance >= 0 ? `+${netBalance} kr (Overskudd)` : `${netBalance} kr (Underskudd)`}
+                </div>
+              </div>
+
+            </div>
+
           </div>
         )}
 
