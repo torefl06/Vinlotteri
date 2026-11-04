@@ -141,6 +141,16 @@ const exactDataFromImage = {
   }
 };
 
+const defaultPrizes = {
+  "Uke 45": { title: "Rødvin - Marques de Chive", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
+  "Uke 46": { title: "Hvitvin - Riesling Trocken", image: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
+  "Uke 47": { title: "Prosecco Spumante", image: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", winner: "" },
+  "Uke 48": { title: "Flott Rødvin", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
+  "Uke 49": { title: "Julevin Spesial", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", winner: "" },
+  "Uke 50": { title: "Eksklusiv Champagne", image: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", winner: "" },
+  "Uke 51": { title: "Stor Julekurv & Vin", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" }
+};
+
 const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
@@ -155,11 +165,21 @@ export default function App() {
     }
   });
 
+  const [prizes, setPrizes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vinlotteri_prizes_v1');
+      return saved ? JSON.parse(saved) : defaultPrizes;
+    } catch (e) {
+      return defaultPrizes;
+    }
+  });
+
   const [activeWeek, setActiveWeek] = useState("Uke 45");
   const [buyerName, setBuyerName] = useState("");
   const [selectedTickets, setSelectedTickets] = useState({});
   
   const [showVippsModal, setShowVippsModal] = useState(false);
+  const [showPrizesModal, setShowPrizesModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
   const [adminError, setAdminError] = useState("");
@@ -171,6 +191,12 @@ export default function App() {
       localStorage.setItem('vinlotteri_fixed_v4', JSON.stringify(weeklyData));
     } catch (e) {}
   }, [weeklyData]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vinlotteri_prizes_v1', JSON.stringify(prizes));
+    } catch (e) {}
+  }, [prizes]);
 
   const getTicketOwner = (week, ticketNum) => {
     const weekObj = weeklyData[week] || {};
@@ -204,7 +230,6 @@ export default function App() {
   };
 
   const totalSelectedCount = Object.values(selectedTickets).reduce((acc, arr) => acc + (arr ? arr.length : 0), 0);
-
   const currentWeekData = weeklyData[activeWeek] || {};
   const soldCountInActiveWeek = Object.values(currentWeekData).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
 
@@ -238,10 +263,12 @@ export default function App() {
   };
 
   const resetToInitial = () => {
-    if (window.confirm("Vil du tilbakestille loddene til den opprinnelige Excel-listen?")) {
+    if (window.confirm("Vil du tilbakestille loddene og premier til utgangspunktet?")) {
       setWeeklyData(exactDataFromImage);
+      setPrizes(defaultPrizes);
       localStorage.removeItem('vinlotteri_fixed_v4');
-      alert("Loddene er tilbakestilt!");
+      localStorage.removeItem('vinlotteri_prizes_v1');
+      alert("Alt er tilbakestilt!");
     }
   };
 
@@ -265,6 +292,24 @@ export default function App() {
     if (allTicketsInActiveWeek.length === 0) return;
     const random = allTicketsInActiveWeek[Math.floor(Math.random() * allTicketsInActiveWeek.length)];
     setWinner(random);
+
+    setPrizes(prev => ({
+      ...prev,
+      [activeWeek]: {
+        ...prev[activeWeek],
+        winner: `${random.owner} (Lodd #${random.ticketNum})`
+      }
+    }));
+  };
+
+  const updatePrize = (week, field, value) => {
+    setPrizes(prev => ({
+      ...prev,
+      [week]: {
+        ...prev[week],
+        [field]: value
+      }
+    }));
   };
 
   return (
@@ -278,12 +323,19 @@ export default function App() {
           </div>
         </div>
 
-        <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
-  <p className="font-bold text-amber-400">Slik gjør du det:</p>
-  <p>1. Åpne Vipps-appen på mobilen din.</p>
-  <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
-  <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
-</div>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setShowPrizesModal(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition shadow-md flex items-center space-x-1.5"
+          >
+            <span>🏆</span>
+            <span>Premier & Vinnere</span>
+          </button>
+
+          <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl flex items-center space-x-2 text-xs">
+            <span className="text-amber-400 font-bold">🎟️ {activeWeek}:</span>
+            <span className="font-extrabold text-white">{soldCountInActiveWeek} / {MAX_TICKETS}</span>
+          </div>
 
           <button 
             onClick={() => {
@@ -317,7 +369,7 @@ export default function App() {
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-black text-amber-400">👑 Admin Kontrollpanel ({activeWeek})</h2>
               <button onClick={resetToInitial} className="text-xs bg-rose-950 hover:bg-rose-900 text-rose-300 px-3 py-1 rounded-lg border border-rose-800">
-                🔄 Tilbakestill til Excel-start
+                🔄 Tilbakestill alt
               </button>
             </div>
             
@@ -411,6 +463,89 @@ export default function App() {
 
       </main>
 
+      {/* PREMIER MODAL */}
+      {showPrizesModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-y-auto shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+              <div>
+                <h2 className="text-2xl font-black text-amber-400 flex items-center space-x-2">
+                  <span>🏆 Premier & Vinneroversikt</span>
+                </h2>
+                <p className="text-xs text-slate-400">Oversikt over ukentlige premier og vinnere</p>
+              </div>
+              <button 
+                onClick={() => setShowPrizesModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs"
+              >
+                Lukk ✖
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {weeksList.map(week => {
+                const prize = prizes[week] || {};
+                return (
+                  <div key={week} className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between">
+                    <div>
+                      <div className="relative h-40 bg-slate-900">
+                        {prize.image ? (
+                          <img src={prize.image} alt={prize.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-4xl">🍷</div>
+                        )}
+                        <span className="absolute top-2 left-2 bg-amber-500 text-slate-950 font-black text-xs px-2.5 py-1 rounded-lg">
+                          {week}
+                        </span>
+                      </div>
+
+                      <div className="p-4 space-y-2">
+                        <h3 className="font-bold text-white text-base">{prize.title || "Premie ikke angitt"}</h3>
+                        
+                        <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                          <p className="text-[10px] uppercase font-bold text-slate-500">Vinner:</p>
+                          <p className={`text-xs font-black ${prize.winner ? 'text-emerald-400' : 'text-slate-500 italic'}`}>
+                            {prize.winner ? `🎉 ${prize.winner}` : "Ikke trukket ennå"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {isAdminUnlocked && (
+                      <div className="p-4 bg-slate-900 border-t border-slate-800 space-y-2">
+                        <p className="text-[10px] font-bold text-amber-400 uppercase">✏️ Admin Rediger Premie:</p>
+                        <input 
+                          type="text" 
+                          placeholder="Premietittel" 
+                          value={prize.title || ""} 
+                          onChange={(e) => updatePrize(week, "title", e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="Bilde URL (https://...)" 
+                          value={prize.image || ""} 
+                          onChange={(e) => updatePrize(week, "image", e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="Vinner (overstyr)" 
+                          value={prize.winner || ""} 
+                          onChange={(e) => updatePrize(week, "winner", e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN MODAL */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl">
@@ -445,6 +580,7 @@ export default function App() {
         </div>
       )}
 
+      {/* VIPPS MODAL */}
       {showVippsModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
@@ -458,7 +594,7 @@ export default function App() {
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
               <p className="font-bold text-amber-400">Slik gjør du det:</p>
               <p>1. Åpne Vipps-appen på mobilen din.</p>
-              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til ansvarlig.</p>
+              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
               <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
             </div>
 
