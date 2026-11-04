@@ -154,7 +154,6 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
-// DISKRÉ SPILLEMASKIN-KLIKK
 let audioCtx = null;
 const playClickSound = () => {
   try {
@@ -175,27 +174,44 @@ const playClickSound = () => {
   } catch(e) {}
 };
 
-// DAMESTEMME-FUNKSJON MED SENSUELT TEMPO OG TONE
-const speakFemaleVoice = (text, pitch = 0.9, rate = 0.85) => {
+// MYK DAMESTEMME MED EKSTRA SIKRING FOR KVINNELIG VOKAL
+const speakSoftFemaleVoice = (text, pitch = 1.2, rate = 0.8) => {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'nb-NO';
-    utterance.pitch = pitch; // Litt dypere og mykere tone
-    utterance.rate = rate;   // Roligere tempo for spenning
+    utterance.pitch = pitch; // Høyere tonehøyde for å garantere en myk kvinnelig klang
+    utterance.rate = rate;   // Rolig tempo
 
     const voices = window.speechSynthesis.getVoices();
-    // Prioriterer kjente kvinnestemmer (Nora, Hedda, Zira, Google, etc.)
-    const femaleVoice = voices.find(v => 
-      (v.lang.includes('nb') || v.lang.includes('no')) && 
-      (v.name.toLowerCase().includes('nora') || 
-       v.name.toLowerCase().includes('hedda') || 
-       v.name.toLowerCase().includes('female') || 
-       v.name.toLowerCase().includes('zira') ||
-       v.name.toLowerCase().includes('google'))
-    ) || voices.find(v => v.lang.includes('nb') || v.lang.includes('no'));
+    
+    // Norske kvinnestemmer eller generelle kvinnestemmer
+    const femaleKeywords = ['nora', 'hedda', 'zira', 'iselin', 'lene', 'hanna', 'ingrid', 'siri', 'female', 'kvinne', 'girl', 'woman'];
+    const maleKeywords = ['jon', 'stian', 'sverre', 'male', 'mann', 'boy', 'man', 'david', 'george', 'mark'];
 
-    if (femaleVoice) utterance.voice = femaleVoice;
+    // 1. Prøv å finne en eksplisitt norsk kvinnestemme
+    let selectedVoice = voices.find(v => 
+      (v.lang.includes('nb') || v.lang.includes('no')) &&
+      femaleKeywords.some(kw => v.name.toLowerCase().includes(kw))
+    );
+
+    // 2. Hvis ingen treff på navn, velg en norsk stemme som IKKE har mannlige nøkkelord
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => 
+        (v.lang.includes('nb') || v.lang.includes('no')) &&
+        !maleKeywords.some(kw => v.name.toLowerCase().includes(kw))
+      );
+    }
+
+    // 3. Reserveløsning: Hvilken som helst kvinne-stemme
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
     window.speechSynthesis.speak(utterance);
   }
 };
@@ -242,6 +258,7 @@ export default function App() {
 
   useEffect(() => {
     if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
       };
@@ -391,17 +408,16 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // Vis vinnervinduet
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
 
-        // DAMESTEMMEN SIER "Og vinneren er..." med lav, behagelig og mystisk stemme
-        speakFemaleVoice(`Og vinneren er...`, 0.85, 0.75);
+        // MYK DAMESTEMME: "Og vinneren er..."
+        speakSoftFemaleVoice(`Og vinneren er...`, 1.25, 0.75);
 
-        // Etter en god og suspensefylt pause på 3.5 sekunder, avsløres og ropes navnet opp!
+        // Avslør og rop opp navnet etter en spennende pause
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
           
-          speakFemaleVoice(`${winningTicket.owner}`, 0.95, 0.9);
+          speakSoftFemaleVoice(`${winningTicket.owner}`, 1.3, 0.85);
 
           if (flaskeNummer === 1) {
             setTempWinner1(winningTicket);
@@ -681,7 +697,7 @@ export default function App() {
 
       </main>
 
-      {/* REVEAL-MODAL MED ELEGANTE DAMESTEMME OG STILLESTÅENDE NAVN */}
+      {/* REVEAL-MODAL MED MYK DAMESTEMME */}
       {revealModal.show && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border-4 border-amber-400 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.3)]">
