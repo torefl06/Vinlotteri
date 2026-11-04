@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// Eksakt mapping fra rad 1 til 45 i Excel-bildene dine for alle uker (Uke 45-51)
+// Eksakt mapping fra Excel-dokumentasjonen for Uke 45-51
 const exactDataFromImage = {
   "Uke 45": {
     "Pål E": [1, 24],
@@ -20,7 +20,7 @@ const exactDataFromImage = {
     "Alexander": [18, 21],
     "Ingvild": [19],
     "Ebbe": [25],
-    "Kristian": [31], // Rad 31 i bilde 2
+    "Kristian": [31],
     "Rene G": [44, 45]
   },
   "Uke 46": {
@@ -359,4 +359,125 @@ export default function App() {
 
             <div className="text-right">
               <p className="text-xs text-slate-400">Valgt totalt på tvers av uker:</p>
-              <p className="text-lg font-black text-amber-400">{totalSelectedCount} lodd     
+              <p className="text-lg font-black text-amber-400">{totalSelectedCount} lodd ({totalSelectedCount * TICKET_PRICE} kr)</p>
+            </div>
+
+            <button 
+              onClick={handleProceedToVipps}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-3 rounded-xl transition transform active:scale-95 shadow-lg text-sm"
+            >
+              Registrer & Vipps ➔
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-[#0f172a] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h2 className="text-lg font-bold text-white flex items-center space-x-2">
+              <span>🎟️ Lodd rutenett for</span>
+              <span className="text-amber-400 font-extrabold">{activeWeek}</span>
+            </h2>
+            <p className="text-xs text-slate-400">Klikk på ledige ruter for å velge/avvelge lodd i denne uken</p>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-3">
+            {Array.from({ length: MAX_TICKETS }, (_, i) => i + 1).map(num => {
+              const owner = getTicketOwner(activeWeek, num);
+              const isSelectedByMe = (selectedTickets[activeWeek] || []).includes(num);
+
+              let boxStyle = "bg-slate-950 border-slate-800/80 text-amber-400 hover:border-amber-500/50 hover:bg-slate-900";
+              if (owner) {
+                boxStyle = "bg-rose-950/30 border-rose-900/50 text-rose-300 cursor-not-allowed";
+              } else if (isSelectedByMe) {
+                boxStyle = "bg-amber-500 border-amber-400 text-slate-950 font-black shadow-lg shadow-amber-500/20 scale-105";
+              }
+
+              return (
+                <button
+                  key={num}
+                  onClick={() => handleTicketClick(num)}
+                  className={`h-24 rounded-2xl border p-3 flex flex-col justify-between items-start transition ${boxStyle}`}
+                >
+                  <span className="text-lg font-black">#{num}</span>
+                  <span className="text-[11px] truncate w-full text-left font-medium opacity-80">
+                    {owner ? owner : isSelectedByMe ? "Valgt av deg" : "Ledig"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+      </main>
+
+      {showAdminModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold text-amber-400 mb-1">🔒 Admin Innlogging</h2>
+            <p className="text-slate-400 text-xs mb-4">Oppgi adminkoden for å åpne trekningsfunksjonen.</p>
+            <form onSubmit={handleAdminUnlock} className="space-y-3">
+              <input 
+                type="password"
+                placeholder="Skriv inn adminkode..."
+                value={adminPasswordInput}
+                onChange={(e) => setAdminPasswordInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white text-center font-mono focus:outline-none focus:border-amber-500"
+              />
+              {adminError && <p className="text-rose-400 text-xs text-center">{adminError}</p>}
+              <div className="flex space-x-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAdminModal(false)}
+                  className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs"
+                >
+                  Avbryt
+                </button>
+                <button 
+                  type="submit" 
+                  className="w-1/2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-md"
+                >
+                  Lås opp
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showVippsModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
+            <div className="text-4xl mb-2">📱</div>
+            <h2 className="text-2xl font-black text-amber-400 mb-1">Husk å Vippse!</h2>
+            <p className="text-slate-300 text-sm mb-4">
+              Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
+              Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
+            </p>
+
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
+              <p className="font-bold text-amber-400">Slik gjør du det:</p>
+              <p>1. Åpne Vipps-appen på mobilen din.</p>
+              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til ansvarlig.</p>
+              <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button 
+                onClick={() => setShowVippsModal(false)}
+                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-xs transition"
+              >
+                Avbryt
+              </button>
+              <button 
+                onClick={confirmPurchase}
+                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg"
+              >
+                Ja, jeg har Vippset!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
