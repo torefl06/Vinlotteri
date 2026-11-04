@@ -201,6 +201,7 @@ export default function App() {
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [showWinnersModal, setShowWinnersModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
   
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
   const [adminError, setAdminError] = useState("");
@@ -214,7 +215,6 @@ export default function App() {
   const [revealModal, setRevealModal] = useState({ show: false, bottle: 1, name: "", ticket: null, stage: "drumroll" });
   const [showConfirmDraw, setShowConfirmDraw] = useState(false);
 
-  // Laster inn lydobjektet PÅ FORHÅND i minnet så det ikke blir forsinkelse
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -343,7 +343,6 @@ export default function App() {
       return;
     }
 
-    // Aktiverer lydmottakeren på brukerklikket
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play().then(() => {
@@ -358,7 +357,7 @@ export default function App() {
     const winningTicket = pool[Math.floor(Math.random() * pool.length)];
     const winNumStr = winningTicket.ticketNum.toString().padStart(2, '0');
 
-    let duration = 2000; // Tett og responsiv snurring
+    let duration = 2000; 
     let elapsed = 0;
 
     const timer = setInterval(() => {
@@ -374,10 +373,8 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // 1. Åpne vinnervinduet NØYAKTIG idet hjulet stopper
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         
-        // 2. Spill av den forhåndslastede lyden UDEN NOEN FORSINKELSE (0 ms delay)
         if (audioRef.current) {
           audioRef.current.currentTime = 0;
           audioRef.current.play().catch(() => {
@@ -386,7 +383,6 @@ export default function App() {
           });
         }
 
-        // 3. Vent 4,5 sekunder før navneavsløring (gir 3.2s tale + 1.3s perfekt kunstpause)
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
 
@@ -454,6 +450,14 @@ export default function App() {
         </div>
 
         <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setShowQRModal(true)}
+            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+          >
+            <span>📱</span>
+            <span>QR-kode</span>
+          </button>
+
           <button 
             onClick={() => setShowPrizeModal(true)}
             className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
@@ -667,6 +671,25 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* QR-KODE MODAL */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-3xl w-full max-w-sm text-center space-y-4 shadow-2xl">
+            <h2 className="text-xl font-black text-amber-400">📱 Scan for Vinlotteriet</h2>
+            <p className="text-xs text-slate-300">Scan koden med mobilen for å åpne appen direkte!</p>
+            <div className="bg-white p-4 rounded-2xl inline-block shadow-inner">
+              <img src="./qr.jpg" alt="QR Kode Vinlotteriet" className="w-56 h-56 mx-auto object-contain" />
+            </div>
+            <button 
+              onClick={() => setShowQRModal(false)}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 py-2.5 rounded-xl text-xs w-full transition"
+            >
+              Lukk ✖
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* REVEAL-MODAL MED DIN EGEN LYDFIL */}
       {revealModal.show && (
