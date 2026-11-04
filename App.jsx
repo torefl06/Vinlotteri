@@ -335,15 +335,9 @@ export default function App() {
       return;
     }
 
-    // Klargjør lydobjektet på selve brukerklikket
+    // Pre-laster lyden umiddelbart på klikket
     const customAudio = new Audio('./vinner.mp3.m4a');
-    const playPromise = customAudio.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        customAudio.pause();
-        customAudio.currentTime = 0;
-      }).catch(() => {});
-    }
+    customAudio.load();
 
     setIsSpinning(true);
     setShowConfirmDraw(false);
@@ -351,7 +345,7 @@ export default function App() {
     const winningTicket = pool[Math.floor(Math.random() * pool.length)];
     const winNumStr = winningTicket.ticketNum.toString().padStart(2, '0');
 
-    let duration = 3000; 
+    let duration = 2500; 
     let elapsed = 0;
 
     const timer = setInterval(() => {
@@ -367,17 +361,17 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // 1. Vis boksen PÅ SEKUNDET hjulene stopper
+        // 1. Åpne spenningsboksen MENS tallet stopper
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         
-        // 2. Start lyden «Og vinneren er...» MED ÉN GANG boksen spretter opp!
+        // 2. Start lydopptaket ("Og vinneren er...") UDEN FORSINKELSE (på 0ms)
         customAudio.currentTime = 0;
         customAudio.play().catch(() => {
-          const altAudio = new Audio('./vinner.mp3') || new Audio('vinner.mp3.m4a');
+          const altAudio = new Audio('./vinner.mp3');
           altAudio.play().catch(() => {});
         });
 
-        // 3. Vent 4,2 sekunder (slik at stemmen din rekker å prate ferdig + over 1 sekunds pause) før navnet avsløres!
+        // 3. Vent nøyaktig 4.5 sekunder (3.2s stemme + 1.3s god kunstpause) før navnet ropes ut på skjermen!
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
 
@@ -387,7 +381,7 @@ export default function App() {
             setTempWinner2(winningTicket);
             setShowConfirmDraw(true);
           }
-        }, 4200);
+        }, 4500);
       }
     }, 80);
   };
