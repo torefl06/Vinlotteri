@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-// Eksakt mapping fra Excel-dokumentasjonen for Uke 45-51
 const exactDataFromImage = {
   "Uke 45": {
     "Pål E": [1, 24],
@@ -187,9 +186,12 @@ export default function App() {
   const [adminError, setAdminError] = useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
 
+  // Spillemaskin-tilstander
   const [isSpinning, setIsSpinning] = useState(false);
   const [slotDisplay, setSlotDisplay] = useState({ tens: "0", ones: "0" });
-  const [currentWinner, setCurrentWinner] = useState(null);
+  const [tempWinner1, setTempWinner1] = useState(null);
+  const [tempWinner2, setTempWinner2] = useState(null);
+  const [showConfirmDraw, setShowConfirmDraw] = useState(false);
 
   useEffect(() => {
     try {
@@ -268,13 +270,15 @@ export default function App() {
   };
 
   const resetToInitial = () => {
-    if (window.confirm("Vil du tilbakestille loddene og premier til utgangspunktet?")) {
+    if (window.confirm("Vil du tilbakestille lodd, vinnere og premier til utgangspunktet? (Flott under testing)")) {
       setWeeklyData(exactDataFromImage);
       setPrizes(defaultPrizes);
       localStorage.removeItem('vinlotteri_fixed_v4');
       localStorage.removeItem('vinlotteri_prizes_v3');
-      setCurrentWinner(null);
-      alert("Alt er tilbakestilt!");
+      setTempWinner1(null);
+      setTempWinner2(null);
+      setShowConfirmDraw(false);
+      alert("Alt er tilbakestilt til utgangspunktet!");
     }
   };
 
@@ -294,40 +298,61 @@ export default function App() {
     Array.isArray(tickets) ? tickets.map(t => ({ ticketNum: t, owner: name })) : []
   );
 
-  const startSlotMachine = () => {
+  // LANG OG SPENNENDE ENARMET BANDITT (6 SEKUNDER)
+  const startSlotMachine = (flaskeNummer) => {
     if (soldTicketsInActiveWeek.length === 0) {
-      alert(`Ingen lodd er solgt eller registrert for ${activeWeek} ennå!`);
+      alert(`Ingen lodd er solgt for ${activeWeek} ennå!`);
+      return;
+    }
+
+    // Ekskluder vinner 1 hvis vi trekker vinner 2
+    let pool = soldTicketsInActiveWeek;
+    if (flaskeNummer === 2 && tempWinner1) {
+      pool = pool.filter(t => t.ticketNum !== tempWinner1.ticketNum);
+    }
+
+    if (pool.length === 0) {
+      alert("Ingen flere solgte lodd å trekke fra!");
       return;
     }
 
     setIsSpinning(true);
-    setCurrentWinner(null);
+    setShowConfirmDraw(false);
 
-    const winningTicket = soldTicketsInActiveWeek[Math.floor(Math.random() * soldTicketsInActiveWeek.length)];
+    const winningTicket = pool[Math.floor(Math.random() * pool.length)];
     const winNumStr = winningTicket.ticketNum.toString().padStart(2, '0');
 
-    let counter = 0;
-    const interval = setInterval(() => {
+    let duration = 6000; // 6 sekunders spenning
+    let intervalTime = 50;
+    let elapsed = 0;
+
+    const timer = setInterval(() => {
       const randomTens = Math.floor(Math.random() * 5).toString();
       const randomOnes = Math.floor(Math.random() * 10).toString();
       setSlotDisplay({ tens: randomTens, ones: randomOnes });
 
-      counter += 100;
-      if (counter >= 3000) {
-        clearInterval(interval);
+      elapsed += intervalTime;
+      if (elapsed >= duration) {
+        clearInterval(timer);
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
-        setCurrentWinner(winningTicket);
         setIsSpinning(false);
 
-        setPrizes(prev => ({
-          ...prev,
-          [activeWeek]: {
-            ...prev[activeWeek],
-            winner: `${winningTicket.owner} (Lodd #${winningTicket.ticketNum})`
-          }
-        }));
+        if (flaskeNummer === 1) {
+          setTempWinner1(winningTicket);
+        } else {
+          setTempWinner2(winningTicket);
+          setShowConfirmDraw(true); // Spør om godkjenning når begge er trukket
+        }
       }
-    }, 80);
+    }, intervalTime);
+  };
+
+  // Godkjenn og lagre trekningen direkte i vinneroversikten
+  const saveFinalWinners = () => {
+    const winnerText = `1: ${tempWinner1.owner} (#${tempWinner1.ticketNum}) | 2: ${tempWinner2.owner} (#${tempWinner2.ticketNum})`;
+    updatePrize(activeWeek, "winner", winnerText);
+    setShowConfirmDraw(false);
+    alert(`🎉 Vinnerne for ${activeWeek} er nå godkjent og lagret i vinnerlisten!`);
   };
 
   const updatePrize = (week, field, value) => {
@@ -414,7 +439,7 @@ export default function App() {
         {weeksList.map(w => (
           <button 
             key={w}
-            onClick={() => { setActiveWeek(w); setCurrentWinner(null); }}
+            onClick={() => { setActiveWeek(w); setTempWinner1(null); setTempWinner2(null); setShowConfirmDraw(false); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition ${activeWeek === w ? 'bg-amber-500 text-slate-950 shadow-lg scale-105' : 'bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800'}`}
           >
             {w}
@@ -424,31 +449,32 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
 
+        {/* ADMIN KONTROLLPANEL MED 6-SEKUNDERS ENARMET BANDITT */}
         {isAdminUnlocked && (
           <div className="bg-gradient-to-b from-amber-950/40 to-slate-900/90 border-2 border-amber-500/50 p-6 rounded-2xl shadow-2xl space-y-6">
             <div className="flex justify-between items-center border-b border-amber-500/30 pb-3">
               <h2 className="text-lg font-black text-amber-400 flex items-center space-x-2">
                 <span>🎰 Enarmet Banditt - Trekning for {activeWeek}</span>
               </h2>
-              <button onClick={resetToInitial} className="text-xs bg-rose-950 hover:bg-rose-900 text-rose-300 px-3 py-1 rounded-lg border border-rose-800">
-                🔄 Tilbakestill alt
+              <button onClick={resetToInitial} className="text-xs bg-rose-950 hover:bg-rose-900 text-rose-300 px-3 py-1 rounded-lg border border-rose-800 font-bold">
+                🔄 Tilbakestill alt (Test-modus)
               </button>
             </div>
             
-            <div className="flex flex-col items-center justify-center space-y-4 py-2">
+            <div className="flex flex-col items-center justify-center space-y-6 py-2">
               <div className="bg-slate-950 border-4 border-amber-500/80 p-6 rounded-3xl shadow-2xl flex items-center space-x-6 relative">
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-500 text-slate-950 font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
-                  {isSpinning ? "SNURRER..." : "KLAR TIL TREKNING"}
+                  {isSpinning ? "🎰 SPENNINGEN STIGER (6s)..." : "KLAR TIL TREKNING"}
                 </div>
 
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
-                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
+                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-bounce' : ''}`}>
                     {slotDisplay.tens}
                   </span>
                 </div>
 
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
-                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
+                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-bounce' : ''}`}>
                     {slotDisplay.ones}
                   </span>
                 </div>
@@ -459,19 +485,62 @@ export default function App() {
                 </div>
               </div>
 
-              <button 
-                onClick={startSlotMachine}
-                disabled={isSpinning}
-                className={`bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black px-8 py-3.5 rounded-xl text-base shadow-xl transform active:scale-95 transition ${isSpinning ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {isSpinning ? "🎰 Trekker vinner..." : `🎰 DRA I SPAKEN (TREKK ${activeWeek.toUpperCase()})`}
-              </button>
+              {/* TREKNINGSKNAPPER FOR FLASKE 1 OG FLASKE 2 */}
+              <div className="flex flex-wrap gap-4 justify-center">
+                <button 
+                  onClick={() => startSlotMachine(1)}
+                  disabled={isSpinning}
+                  className={`bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black px-6 py-3 rounded-xl text-sm shadow-xl transform active:scale-95 transition ${isSpinning ? 'opacity-50' : ''}`}
+                >
+                  {isSpinning ? "🎰 Snurrer..." : "🍾 TREKK FLASKE 1"}
+                </button>
 
-              {currentWinner && !isSpinning && (
-                <div className="bg-emerald-950/90 border-2 border-emerald-400 px-8 py-3 rounded-2xl text-center space-y-1 shadow-2xl animate-bounce">
-                  <p className="text-emerald-400 text-xs font-extrabold uppercase tracking-widest">🎉 GRATULERER TIL VINNEREN! 🎉</p>
-                  <p className="text-2xl font-black text-white">{currentWinner.owner}</p>
-                  <p className="text-amber-400 text-sm font-bold">Vinnerlodd #{currentWinner.ticketNum} i {activeWeek}</p>
+                <button 
+                  onClick={() => startSlotMachine(2)}
+                  disabled={isSpinning || !tempWinner1}
+                  className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 font-black px-6 py-3 rounded-xl text-sm shadow-xl transform active:scale-95 transition ${(!tempWinner1 || isSpinning) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                >
+                  {isSpinning ? "🎰 Snurrer..." : "🍾 TREKK FLASKE 2"}
+                </button>
+              </div>
+
+              {/* VISNING AV MIDLERTIDIGE VINNERE */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+                <div className={`p-4 rounded-xl border text-center ${tempWinner1 ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-950/50 border-slate-800'}`}>
+                  <p className="text-xs font-bold text-amber-400 uppercase">Flaske 1 Vinner:</p>
+                  <p className="text-lg font-black text-white">{tempWinner1 ? `${tempWinner1.owner} (Lodd #${tempWinner1.ticketNum})` : "Ikke trukket ennå"}</p>
+                </div>
+
+                <div className={`p-4 rounded-xl border text-center ${tempWinner2 ? 'bg-emerald-950/40 border-emerald-500' : 'bg-slate-950/50 border-slate-800'}`}>
+                  <p className="text-xs font-bold text-emerald-400 uppercase">Flaske 2 Vinner:</p>
+                  <p className="text-lg font-black text-white">{tempWinner2 ? `${tempWinner2.owner} (Lodd #${tempWinner2.ticketNum})` : "Ikke trukket ennå"}</p>
+                </div>
+              </div>
+
+              {/* BOKS SOM SPØR OM TREKNINGEN ER ENDELIG */}
+              {showConfirmDraw && tempWinner1 && tempWinner2 && (
+                <div className="bg-amber-950/80 border-2 border-amber-400 p-6 rounded-2xl text-center space-y-3 max-w-lg shadow-2xl animate-fade-in">
+                  <h3 className="text-lg font-black text-amber-300">❓ Er denne trekningen endelig?</h3>
+                  <p className="text-xs text-slate-300">
+                    Vinnere for {activeWeek}:<br/>
+                    <strong>Flaske 1:</strong> {tempWinner1.owner} (# {tempWinner1.ticketNum})<br/>
+                    <strong>Flaske 2:</strong> {tempWinner2.owner} (# {tempWinner2.ticketNum})
+                  </p>
+
+                  <div className="flex justify-center space-x-3 pt-2">
+                    <button 
+                      onClick={() => { setTempWinner1(null); setTempWinner2(null); setShowConfirmDraw(false); }}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs"
+                    >
+                      🔄 Omkamp / Trekk på nytt
+                    </button>
+                    <button 
+                      onClick={saveFinalWinners}
+                      className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-6 py-2 rounded-xl text-xs shadow-lg"
+                    >
+                      ✅ Ja, godkjenn & lagre
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -672,7 +741,7 @@ export default function App() {
                           placeholder="Skriv inn vinner..." 
                           value={prize.winner || ""} 
                           onChange={(e) => updatePrize(week, "winner", e.target.value)}
-                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-400 font-bold w-full sm:w-48 text-left sm:text-right"
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-400 font-bold w-full sm:w-64 text-left sm:text-right"
                         />
                       ) : (
                         <p className={`text-sm font-black ${prize.winner ? 'text-emerald-400' : 'text-slate-600 italic'}`}>
@@ -761,4 +830,3 @@ export default function App() {
     </div>
   );
 }
-    
