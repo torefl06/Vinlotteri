@@ -154,6 +154,54 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
+// HELPER FOR LYDEFFEKTER VIA WEB AUDIO API
+const playSound = (type) => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (type === 'tick') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(300 + Math.random() * 200, ctx.currentTime);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } else if (type === 'drumroll') {
+      let now = ctx.currentTime;
+      for (let i = 0; i < 30; i++) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100 + Math.random() * 30, now + i * 0.1);
+        gain.gain.setValueAtTime(0.08, now + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.1);
+        osc.stop(now + i * 0.1 + 0.08);
+      }
+    } else if (type === 'cheer') {
+      const now = ctx.currentTime;
+      const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.6);
+      });
+    }
+  } catch (e) {}
+};
+
 export default function App() {
   const [weeklyData, setWeeklyData] = useState(() => {
     try {
@@ -186,11 +234,13 @@ export default function App() {
   const [adminError, setAdminError] = useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
 
-  // Spillemaskin-tilstander
+  // Spillemaskin & Avsløring
   const [isSpinning, setIsSpinning] = useState(false);
   const [slotDisplay, setSlotDisplay] = useState({ tens: "0", ones: "0" });
   const [tempWinner1, setTempWinner1] = useState(null);
   const [tempWinner2, setTempWinner2] = useState(null);
+  
+  const [revealModal, setRevealModal] = useState({ show: false, bottle: 1, name: "", ticket: null, stage: "drumroll" });
   const [showConfirmDraw, setShowConfirmDraw] = useState(false);
 
   useEffect(() => {
@@ -270,7 +320,7 @@ export default function App() {
   };
 
   const resetToInitial = () => {
-    if (window.confirm("Vil du tilbakestille lodd, vinnere og premier til utgangspunktet? (Flott under testing)")) {
+    if (window.confirm("Vil du tilbakestille alt til utgangspunktet?")) {
       setWeeklyData(exactDataFromImage);
       setPrizes(defaultPrizes);
       localStorage.removeItem('vinlotteri_fixed_v4');
@@ -278,7 +328,7 @@ export default function App() {
       setTempWinner1(null);
       setTempWinner2(null);
       setShowConfirmDraw(false);
-      alert("Alt er tilbakestilt til utgangspunktet!");
+      alert("Alt er tilbakestilt!");
     }
   };
 
@@ -298,14 +348,13 @@ export default function App() {
     Array.isArray(tickets) ? tickets.map(t => ({ ticketNum: t, owner: name })) : []
   );
 
-  // LANG OG SPENNENDE ENARMET BANDITT (6 SEKUNDER)
+  // TREKNING MED TIVOLI-LYD OG AVSLØRINGSBOBLE
   const startSlotMachine = (flaskeNummer) => {
     if (soldTicketsInActiveWeek.length === 0) {
       alert(`Ingen lodd er solgt for ${activeWeek} ennå!`);
       return;
     }
 
-    // Ekskluder vinner 1 hvis vi trekker vinner 2
     let pool = soldTicketsInActiveWeek;
     if (flaskeNummer === 2 && tempWinner1) {
       pool = pool.filter(t => t.ticketNum !== tempWinner1.ticketNum);
@@ -322,37 +371,47 @@ export default function App() {
     const winningTicket = pool[Math.floor(Math.random() * pool.length)];
     const winNumStr = winningTicket.ticketNum.toString().padStart(2, '0');
 
-    let duration = 6000; // 6 sekunders spenning
-    let intervalTime = 50;
+    let duration = 4000; 
     let elapsed = 0;
 
     const timer = setInterval(() => {
       const randomTens = Math.floor(Math.random() * 5).toString();
       const randomOnes = Math.floor(Math.random() * 10).toString();
       setSlotDisplay({ tens: randomTens, ones: randomOnes });
+      
+      playSound('tick'); // Tivolilyd/klikk mens den snurrer
 
-      elapsed += intervalTime;
+      elapsed += 80;
       if (elapsed >= duration) {
         clearInterval(timer);
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        if (flaskeNummer === 1) {
-          setTempWinner1(winningTicket);
-        } else {
-          setTempWinner2(winningTicket);
-          setShowConfirmDraw(true); // Spør om godkjenning når begge er trukket
-        }
+        // 1. Vis først "Og vinneren er..." med trommevirvel i 3.5 sekunder
+        setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
+        playSound('drumroll');
+
+        setTimeout(() => {
+          // 2. Avslør navnet med jubel og applaus!
+          setRevealModal(prev => ({ ...prev, stage: "winner" }));
+          playSound('cheer');
+
+          if (flaskeNummer === 1) {
+            setTempWinner1(winningTicket);
+          } else {
+            setTempWinner2(winningTicket);
+            setShowConfirmDraw(true);
+          }
+        }, 3500);
       }
-    }, intervalTime);
+    }, 80);
   };
 
-  // Godkjenn og lagre trekningen direkte i vinneroversikten
   const saveFinalWinners = () => {
     const winnerText = `1: ${tempWinner1.owner} (#${tempWinner1.ticketNum}) | 2: ${tempWinner2.owner} (#${tempWinner2.ticketNum})`;
     updatePrize(activeWeek, "winner", winnerText);
     setShowConfirmDraw(false);
-    alert(`🎉 Vinnerne for ${activeWeek} er nå godkjent og lagret i vinnerlisten!`);
+    alert(`🎉 Vinnerne for ${activeWeek} er godkjent og lagret!`);
   };
 
   const updatePrize = (week, field, value) => {
@@ -449,22 +508,21 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
 
-        {/* ADMIN KONTROLLPANEL MED 6-SEKUNDERS ENARMET BANDITT */}
         {isAdminUnlocked && (
           <div className="bg-gradient-to-b from-amber-950/40 to-slate-900/90 border-2 border-amber-500/50 p-6 rounded-2xl shadow-2xl space-y-6">
             <div className="flex justify-between items-center border-b border-amber-500/30 pb-3">
               <h2 className="text-lg font-black text-amber-400 flex items-center space-x-2">
-                <span>🎰 Enarmet Banditt - Trekning for {activeWeek}</span>
+                <span>🎰 Tivoli & Enarmet Banditt - Trekning ({activeWeek})</span>
               </h2>
               <button onClick={resetToInitial} className="text-xs bg-rose-950 hover:bg-rose-900 text-rose-300 px-3 py-1 rounded-lg border border-rose-800 font-bold">
-                🔄 Tilbakestill alt (Test-modus)
+                🔄 Tilbakestill alt
               </button>
             </div>
             
             <div className="flex flex-col items-center justify-center space-y-6 py-2">
               <div className="bg-slate-950 border-4 border-amber-500/80 p-6 rounded-3xl shadow-2xl flex items-center space-x-6 relative">
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-500 text-slate-950 font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
-                  {isSpinning ? "🎰 SPENNINGEN STIGER (6s)..." : "KLAR TIL TREKNING"}
+                  {isSpinning ? "🎪 TIVOLI-TREKNING PAAGÅR..." : "KLAR TIL TREKNING"}
                 </div>
 
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
@@ -485,7 +543,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* TREKNINGSKNAPPER FOR FLASKE 1 OG FLASKE 2 */}
               <div className="flex flex-wrap gap-4 justify-center">
                 <button 
                   onClick={() => startSlotMachine(1)}
@@ -504,7 +561,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* VISNING AV MIDLERTIDIGE VINNERE */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
                 <div className={`p-4 rounded-xl border text-center ${tempWinner1 ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-950/50 border-slate-800'}`}>
                   <p className="text-xs font-bold text-amber-400 uppercase">Flaske 1 Vinner:</p>
@@ -517,9 +573,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* BOKS SOM SPØR OM TREKNINGEN ER ENDELIG */}
               {showConfirmDraw && tempWinner1 && tempWinner2 && (
-                <div className="bg-amber-950/80 border-2 border-amber-400 p-6 rounded-2xl text-center space-y-3 max-w-lg shadow-2xl animate-fade-in">
+                <div className="bg-amber-950/80 border-2 border-amber-400 p-6 rounded-2xl text-center space-y-3 max-w-lg shadow-2xl">
                   <h3 className="text-lg font-black text-amber-300">❓ Er denne trekningen endelig?</h3>
                   <p className="text-xs text-slate-300">
                     Vinnere for {activeWeek}:<br/>
@@ -618,6 +673,37 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* REVEAL MODAL MED TROMMEVIRVEL & APPLAUS */}
+      {revealModal.show && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border-4 border-amber-500 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-2xl animate-bounce">
+            
+            <span className="text-5xl block">🥁</span>
+            
+            {revealModal.stage === "drumroll" ? (
+              <div className="space-y-4">
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">LODD #{revealModal.ticket} TRUKKET FOR FLASKE {revealModal.bottle}!</span>
+                <h2 className="text-3xl font-black text-white animate-pulse">Og vinneren er...</h2>
+                <p className="text-xs text-slate-400 italic">Hold pusten! Navnet avsløres om et øyeblikk...</p>
+              </div>
+            ) : (
+              <div className="space-y-4 animate-scale-up">
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">🎉 VINNER FLASKE {revealModal.bottle} 🎉</span>
+                <h2 className="text-4xl font-black text-amber-400">{revealModal.name}</h2>
+                <p className="text-sm font-bold text-slate-200">Lodd #{revealModal.ticket} i {activeWeek}</p>
+                <button 
+                  onClick={() => setRevealModal({ ...revealModal, show: false })}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs mt-4 shadow-lg"
+                >
+                  Fortsett ➔
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
       {/* UKENS PREMIE MODAL */}
       {showPrizeModal && (
