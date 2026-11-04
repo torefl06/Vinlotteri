@@ -1,215 +1,145 @@
 import React, { useState, useEffect } from 'react';
 
-// Nøye mappenavn og loddnummer basert på rad 1-25 og rad 26-45 i Excel-arket
-const initialWeeklyData = {
+// Eksakt mapping fra rad 1 til 45 i Excel-bildene dine for alle uker (Uke 45-51)
+const exactDataFromImage = {
   "Uke 45": {
-    "Pål E": [1, 16, 23],
-    "Trine": [2, 12],
+    "Pål E": [1, 24],
+    "Trine": [2, 31],
     "Laila Martine": [3, 17],
-    "Elisabeth T": [4, 28],
+    "Elisabeth T": [4, 29],
     "Charlotte": [5],
-    "Hege": [6, 24, 26],
+    "Hege": [6, 26],
     "Frode": [7],
     "Ingrid": [8, 14],
     "Normi": [9],
-    "Tore": [10, 19],
-    "Daniel": [11, 21],
-    "Karoline": [13],
-    "Gro": [15, 25],
-    "Jannicke": [29],
-    "Alexander": [18, 20],
-    "Ingvild": [18], // sjekk
-    "Ebbe": [22],
-    "Kristian": [30],
+    "Tore": [10, 20],
+    "Daniel": [11, 22],
+    "Karoline": [12, 13],
+    "Gro": [15],
+    "Jannicke": [16, 30],
+    "Alexander": [18, 21],
+    "Ingvild": [19],
+    "Ebbe": [25],
+    "Kristian": [31], // Rad 31 i bilde 2
     "Rene G": [44, 45]
   },
   "Uke 46": {
     "Charlotte": [2],
     "Laila Martine": [3, 17],
-    "Elisabeth T": [4, 28],
+    "Elisabeth T": [4, 29],
     "Ingrid": [5, 14],
-    "Hege": [6, 24, 26],
+    "Hege": [6, 26],
     "Frode": [7],
-    "Jannicke": [8, 29],
-    "Tore": [10, 19],
-    "Daniel": [11, 21],
+    "Jannicke": [8, 30],
+    "Tore": [10, 20],
+    "Daniel": [11, 22],
     "Trine": [12],
     "Normi": [13],
     "Gro": [15],
-    "Pål E": [16, 23],
-    "Alexander": [18, 20],
-    "Ingvild": [18],
-    "Karoline": [22],
-    "Ebbe": [23], // sjekk
+    "Pål E": [16, 24],
+    "Alexander": [18, 21],
+    "Ingvild": [19],
+    "Karoline": [23],
+    "Ebbe": [25],
     "Rene G": [44, 45]
   },
   "Uke 47": {
-    "Pål E": [2, 16, 23],
+    "Pål E": [2, 16, 24],
     "Laila Martine": [3, 17],
-    "Elisabeth T": [4, 28],
+    "Elisabeth T": [4, 29],
     "Frode": [5],
-    "Hege": [6, 24, 26],
+    "Hege": [6, 26],
     "Ingrid": [7, 14],
-    "Charlotte": [8, 27],
+    "Charlotte": [8, 28],
     "Gro": [9, 15],
-    "Tore": [10, 19],
-    "Daniel": [11, 21],
+    "Tore": [10, 20],
+    "Daniel": [11, 22],
     "Trine": [12],
     "Normi": [13],
     "Ingvild": [15],
-    "Jannicke": [16, 29],
-    "Alexander": [18, 20],
-    "Karoline": [22],
-    "Ebbe": [23],
+    "Jannicke": [16, 30],
+    "Alexander": [18, 21],
+    "Karoline": [23],
+    "Ebbe": [25],
     "Rene G": [44, 45]
   },
   "Uke 48": {
     "Trine": [2],
     "Laila Martine": [3, 17],
-    "Elisabeth T": [4, 28],
+    "Elisabeth T": [4, 29],
     "Frode": [5],
-    "Hege": [6, 24, 26],
+    "Hege": [6, 26],
     "Karoline": [7],
-    "Jannicke": [8, 29],
+    "Jannicke": [8, 30],
     "Ingrid": [9, 14],
-    "Tore": [10, 19],
-    "Daniel": [11, 21],
+    "Tore": [10, 20],
+    "Daniel": [11, 22],
     "Normi": [13],
-    "Pål E": [16, 23],
-    "Alexander": [18, 20],
-    "Ingvild": [18],
-    "Ebbe": [23],
-    "Charlotte": [27],
+    "Pål E": [16, 24],
+    "Alexander": [18, 21],
+    "Ingvild": [19],
+    "Ebbe": [25],
+    "Charlotte": [28],
     "Rene G": [44, 45]
   },
   "Uke 49": {
-    "Pål E": [1, 16, 23],
+    "Pål E": [1, 16, 24],
     "Trine": [2],
     "Laila Martine": [3, 17],
-    "Elisabeth T": [4, 28],
+    "Elisabeth T": [4, 29],
     "Frode": [5],
-    "Hege": [6, 24, 26],
+    "Hege": [6, 26],
     "Karoline": [7],
     "Ingrid": [8, 14],
-    "Tore": [10, 19],
-    "Daniel": [11, 21],
+    "Tore": [10, 20],
+    "Daniel": [11, 22],
     "Normi": [13],
     "Ingvild": [15],
-    "Jannicke": [16, 29],
-    "Alexander": [18, 20],
-    "Ebbe": [23],
-    "Charlotte": [27],
+    "Jannicke": [16, 30],
+    "Alexander": [18, 21],
+    "Ebbe": [25],
+    "Charlotte": [28],
     "Rene G": [44, 45]
   },
   "Uke 50": {
     "Laila Martine": [3, 17],
-    "Elisabeth T": [4, 28],
+    "Elisabeth T": [4, 29],
     "Frode": [5],
-    "Hege": [6, 24, 26],
+    "Hege": [6, 26],
     "Ingrid": [7, 14],
-    "Jannicke": [8, 29],
+    "Jannicke": [8, 30],
     "Normi": [9],
-    "Tore": [10, 19],
-    "Daniel": [11, 21],
+    "Tore": [10, 20],
+    "Daniel": [11, 22],
     "Trine": [12],
     "Karoline": [13],
     "Gro": [15],
-    "Pål E": [16, 23],
-    "Alexander": [18, 20],
-    "Ingvild": [18],
-    "Ebbe": [23],
-    "Charlotte": [27],
+    "Pål E": [16, 24],
+    "Alexander": [18, 21],
+    "Ingvild": [19],
+    "Ebbe": [25],
+    "Charlotte": [28],
     "Rene G": [44, 45]
   },
   "Uke 51": {
     "Laila Martine": [3, 17],
-    "Elisabeth T": [4, 28],
-    "Hege": [6, 24, 26],
+    "Elisabeth T": [4, 29],
+    "Hege": [6, 26],
     "Karoline": [7, 12],
     "Normi": [8],
     "Ingrid": [9, 14],
-    "Tore": [10, 19],
-    "Daniel": [11, 21],
+    "Tore": [10, 20],
+    "Daniel": [11, 22],
     "Gro": [15],
-    "Pål E": [16, 23],
-    "Alexander": [18, 20],
-    "Ingvild": [18],
-    "Ebbe": [23],
-    "Charlotte": [27],
-    "Jannicke": [29],
+    "Pål E": [16, 24],
+    "Alexander": [18, 21],
+    "Ingvild": [19],
+    "Ebbe": [25],
+    "Charlotte": [28],
+    "Jannicke": [30],
     "Rene G": [44, 45]
   }
 };
-
-// Bygg en perfekt 1-45 struktur basert på bildet
-const parseExcelImageStructure = () => {
-  const weeks = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
-  
-  // Rader fra 1 til 45 fra bildene
-  const rows = [
-    ["Pål E", "", "Pål E", "", "Pål E", "", ""], // Rad 1 (#1)
-    ["Trine", "Charlotte", "Pål E", "Trine", "Trine", "", ""], // Rad 2 (#2)
-    ["Laila Martine", "Laila Martine", "Laila Martine", "Laila Martine", "Laila Martine", "Laila Martine", "Laila Martine"], // Rad 3 (#3)
-    ["Elisabeth T", "Elisabeth T", "Elisabeth T", "Elisabeth T", "Elisabeth T", "Elisabeth T", "Elisabeth T"], // Rad 4 (#4)
-    ["Charlotte", "Ingrid", "Frode", "Frode", "Frode", "Frode", ""], // Rad 5 (#5)
-    ["Hege", "Hege", "Hege", "Hege", "Hege", "Hege", "Hege"], // Rad 6 (#6)
-    ["Frode", "Frode", "Ingrid", "Karoline", "Karoline", "Ingrid", "Karoline"], // Rad 7 (#7)
-    ["Ingrid", "Jannicke", "Charlotte", "Jannicke", "Ingrid", "Jannicke", "Normi"], // Rad 8 (#8)
-    ["Normi", "", "Gro", "Ingrid", "", "Normi", "Ingrid"], // Rad 9 (#9)
-    ["Tore", "Tore", "Tore", "Tore", "Tore", "Tore", "Tore"], // Rad 10 (#10)
-    ["Daniel", "Daniel", "Daniel", "Daniel", "Daniel", "Daniel", "Daniel"], // Rad 11 (#11)
-    ["Karoline", "Trine", "Trine", "", "", "Trine", "Karoline"], // Rad 12 (#12)
-    ["Karoline", "Normi", "Normi", "Normi", "Normi", "Karoline", ""], // Rad 13 (#13)
-    ["Ingrid", "Ingrid", "Ingrid", "Ingrid", "Ingrid", "Ingrid", "Ingrid"], // Rad 14 (#14)
-    ["Gro", "Gro", "Ingvild", "", "Ingvild", "Gro", "Gro"], // Rad 15 (#15)
-    ["Jannicke", "Pål E", "Jannicke", "Pål E", "Jannicke", "Pål E", "Pål E"], // Rad 16 (#16)
-    ["Laila Martine", "Laila Martine", "Laila Martine", "Laila Martine", "Laila Martine", "Laila Martine", "Laila Martine"], // Rad 17 (#17)
-    ["Alexander", "Alexander", "Alexander", "Alexander", "Alexander", "Alexander", "Alexander"], // Rad 18 (#18)
-    ["Ingvild", "Ingvild", "Ingvild", "Ingvild", "Ingvild", "Ingvild", "Ingvild"], // Rad 19 (#19)
-    ["Tore", "Tore", "Tore", "Tore", "Tore", "Tore", "Tore"], // Rad 20 (#20)
-    ["Alexander", "Alexander", "Alexander", "Alexander", "Alexander", "Alexander", "Alexander"], // Rad 21 (#21)
-    ["Daniel", "Daniel", "Daniel", "Daniel", "Daniel", "Daniel", "Daniel"], // Rad 22 (#22)
-    ["", "Karoline", "Karoline", "", "", "", ""], // Rad 23 (#23)
-    ["Pål E", "Pål E", "Pål E", "Pål E", "Pål E", "Pål E", "Pål E"], // Rad 24 (#24)
-    ["Ebbe", "Ebbe", "Ebbe", "Ebbe", "Ebbe", "Ebbe", "Ebbe"], // Rad 25 (#25)
-    ["Hege", "Hege", "Hege", "Hege", "Hege", "Hege", "Hege"], // Rad 26 (#26)
-    ["", "", "", "", "", "", ""], // Rad 27 (#27)
-    ["Gro", "", "", "Charlotte", "Charlotte", "Charlotte", "Charlotte"], // Rad 28 (#28)
-    ["Elisabeth T", "Elisabeth T", "Elisabeth T", "Elisabeth T", "Elisabeth T", "Elisabeth T", "Elisabeth T"], // Rad 29 (#29)
-    ["Jannicke", "Jannicke", "Jannicke", "Jannicke", "Jannicke", "Jannicke", "Jannicke"], // Rad 30 (#30)
-    ["Kristian", "", "", "", "", "", ""], // Rad 31 (#31)
-    ["", "", "", "", "", "", ""], // Rad 32 (#32)
-    ["", "", "", "", "", "", ""], // Rad 33 (#33)
-    ["", "", "", "", "", "", ""], // Rad 34 (#34)
-    ["", "", "", "", "", "", ""], // Rad 35 (#35)
-    ["", "", "", "", "", "", ""], // Rad 36 (#36)
-    ["", "", "", "", "", "", ""], // Rad 37 (#37)
-    ["", "", "", "", "", "", ""], // Rad 38 (#38)
-    ["", "", "", "", "", "", ""], // Rad 39 (#39)
-    ["", "", "", "", "", "", ""], // Rad 40 (#40)
-    ["", "", "", "", "", "", ""], // Rad 41 (#41)
-    ["", "", "", "", "", "", ""], // Rad 42 (#42)
-    ["", "", "", "", "", "", ""], // Rad 43 (#43)
-    ["Rene G", "Rene G", "Rene G", "Rene G", "Rene G", "Rene G", "Rene G"], // Rad 44 (#44)
-    ["Rene G", "Rene G", "Rene G", "Rene G", "Rene G", "Rene G", "Rene G"]  // Rad 45 (#45)
-  ];
-
-  const result = {};
-  weeks.forEach((w, wIndex) => {
-    result[w] = {};
-    rows.forEach((row, rIndex) => {
-      const ticketNum = rIndex + 1;
-      const name = row[wIndex];
-      if (name && name.trim() !== "") {
-        if (!result[w][name]) result[w][name] = [];
-        result[w][name].push(ticketNum);
-      }
-    });
-  });
-  return result;
-};
-
-const exactDataFromImage = parseExcelImageStructure();
 
 const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
 const TICKET_PRICE = 10;
@@ -218,7 +148,7 @@ const MAX_TICKETS = 45;
 export default function App() {
   const [weeklyData, setWeeklyData] = useState(() => {
     try {
-      const saved = localStorage.getItem('vinlotteri_exact_v3');
+      const saved = localStorage.getItem('vinlotteri_fixed_v4');
       return saved ? JSON.parse(saved) : exactDataFromImage;
     } catch (e) {
       return exactDataFromImage;
@@ -238,7 +168,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('vinlotteri_exact_v3', JSON.stringify(weeklyData));
+      localStorage.setItem('vinlotteri_fixed_v4', JSON.stringify(weeklyData));
     } catch (e) {}
   }, [weeklyData]);
 
@@ -308,9 +238,9 @@ export default function App() {
   };
 
   const resetToInitial = () => {
-    if (window.confirm("Vil du tilbakestille loddene til bildenes opprinnelige rekkefølge?")) {
+    if (window.confirm("Vil du tilbakestille loddene til den opprinnelige Excel-listen?")) {
       setWeeklyData(exactDataFromImage);
-      localStorage.removeItem('vinlotteri_exact_v3');
+      localStorage.removeItem('vinlotteri_fixed_v4');
       alert("Loddene er tilbakestilt!");
     }
   };
@@ -408,4 +338,25 @@ export default function App() {
           </div>
         )}
 
-        <div className="bg-[#0f172a] p-6 rounded-2xl border border-
+        <div className="bg-[#0f172a] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3 w-full md:w-auto">
+            <label className="text-xs font-bold text-slate-400 uppercase">Ditt Navn:</label>
+            <input 
+              type="text" 
+              placeholder="Skriv navnet ditt her..." 
+              value={buyerName}
+              onChange={(e) => setBuyerName(e.target.value)}
+              className="bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 w-64"
+            />
+          </div>
+
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-4 text-xs">
+              <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-slate-950 border border-slate-800"></span><span className="text-slate-400">Ledig</span></div>
+              <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-amber-500"></span><span className="text-amber-400 font-bold">Valgt</span></div>
+              <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-rose-950 border border-rose-800"></span><span className="text-rose-400">Opptatt</span></div>
+            </div>
+
+            <div className="text-right">
+              <p className="text-xs text-slate-400">Valgt totalt på tvers av uker:</p>
+              <p className="text-lg font-black text-amber-400">{totalSelectedCount} lodd
