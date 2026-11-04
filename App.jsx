@@ -150,6 +150,11 @@ const defaultPrizes = {
   "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" }
 };
 
+const initialFeedback = [
+  { id: 1, name: "Daniel", text: "Vinlotteriet er det beste lotteriet ever.", date: "Standard" },
+  { id: 2, name: "Ingrid", text: "De andre vinner jo alltid.", date: "Standard" }
+];
+
 const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
@@ -193,15 +198,26 @@ export default function App() {
     }
   });
 
+  const [feedbackList, setFeedbackList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vinlotteri_feedback_v1');
+      return saved ? JSON.parse(saved) : initialFeedback;
+    } catch (e) {
+      return initialFeedback;
+    }
+  });
+
   const [activeWeek, setActiveWeek] = useState("Uke 45");
   const [buyerName, setBuyerName] = useState("");
   const [selectedTickets, setSelectedTickets] = useState({});
+  const [newFeedbackText, setNewFeedbackText] = useState("");
   
   const [showVippsModal, setShowVippsModal] = useState(false);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [showWinnersModal, setShowWinnersModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
   const [adminError, setAdminError] = useState("");
@@ -234,6 +250,12 @@ export default function App() {
     } catch (e) {}
   }, [prizes]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('vinlotteri_feedback_v1', JSON.stringify(feedbackList));
+    } catch (e) {}
+  }, [feedbackList]);
+
   const getTicketOwner = (week, ticketNum) => {
     const weekObj = weeklyData[week] || {};
     for (const [name, tickets] of Object.entries(weekObj)) {
@@ -263,6 +285,28 @@ export default function App() {
     }
 
     setSelectedTickets({ ...selectedTickets, [activeWeek]: updated });
+  };
+
+  const handleAddFeedback = (e) => {
+    e.preventDefault();
+    if (!buyerName.trim()) {
+      alert("Du må skrive inn navnet ditt i feltet øverst på siden før du legger inn en kommentar! Kun ekte navn er tillatt.");
+      return;
+    }
+    if (!newFeedbackText.trim()) {
+      alert("Skriv inn en kommentar først.");
+      return;
+    }
+
+    const newEntry = {
+      id: Date.now(),
+      name: buyerName.trim(),
+      text: newFeedbackText.trim(),
+      date: new Date().toLocaleDateString('no-NO', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setFeedbackList([newEntry, ...feedbackList]);
+    setNewFeedbackText("");
   };
 
   const totalSelectedCount = Object.values(selectedTickets).reduce((acc, arr) => acc + (arr ? arr.length : 0), 0);
@@ -302,8 +346,10 @@ export default function App() {
     if (window.confirm("Vil du tilbakestille alt til utgangspunktet?")) {
       setWeeklyData(exactDataFromImage);
       setPrizes(defaultPrizes);
+      setFeedbackList(initialFeedback);
       localStorage.removeItem('vinlotteri_fixed_v4');
       localStorage.removeItem('vinlotteri_prizes_v3');
+      localStorage.removeItem('vinlotteri_feedback_v1');
       setTempWinner1(null);
       setTempWinner2(null);
       setShowConfirmDraw(false);
@@ -451,8 +497,16 @@ export default function App() {
 
         <div className="flex items-center space-x-3">
           <button 
-            onClick={() => setShowQRModal(true)}
+            onClick={() => setShowFeedbackModal(true)}
             className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+          >
+            <span>💬</span>
+            <span>Ris & ros</span>
+          </button>
+
+          <button 
+            onClick={() => setShowQRModal(true)}
+            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
           >
             <span>📱</span>
             <span>QR-kode</span>
@@ -671,6 +725,56 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* RIS & ROS MODAL */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-lg shadow-2xl space-y-5">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h2 className="text-xl font-black text-amber-400 flex items-center space-x-2">
+                <span>💬 Ris & Ros</span>
+              </h2>
+              <button 
+                onClick={() => setShowFeedbackModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs"
+              >
+                Lukk ✖
+              </button>
+            </div>
+
+            <form onSubmit={handleAddFeedback} className="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+              <p className="text-xs text-slate-400">
+                Aktiv bruker: <strong className="text-amber-400">{buyerName ? buyerName : "(Skriv navnet ditt øverst i appen)"}</strong>
+              </p>
+              <textarea 
+                rows="2"
+                placeholder="Skriv en ros eller litt ris her..."
+                value={newFeedbackText}
+                onChange={(e) => setNewFeedbackText(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
+              ></textarea>
+              <button 
+                type="submit"
+                className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl text-xs transition shadow-md"
+              >
+                Send kommentar 💬
+              </button>
+            </form>
+
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              {feedbackList.map(item => (
+                <div key={item.id} className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-xl space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-amber-400">{item.name}</span>
+                    <span className="text-[10px] text-slate-500">{item.date}</span>
+                  </div>
+                  <p className="text-xs text-slate-200 italic">"{item.text}"</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QR-KODE MODAL */}
       {showQRModal && (
