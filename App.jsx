@@ -142,13 +142,13 @@ const exactDataFromImage = {
 };
 
 const defaultPrizes = {
-  "Uke 45": { title: "Rødvin & Hvitvin Duo", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
-  "Uke 46": { title: "Riesling & Pinot Noir", image1: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
-  "Uke 47": { title: "Prosecco & Spumante", image1: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
-  "Uke 48": { title: "Flott Rødvinsett", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", winner: "" },
-  "Uke 49": { title: "Julevin Spesial", image1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", image2: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
-  "Uke 50": { title: "Eksklusiv Champagne & Rødvin", image1: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
-  "Uke 51": { title: "Stor Julekurv & Champagne", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", winner: "" }
+  "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
+  "Uke 46": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
+  "Uke 47": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
+  "Uke 48": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", winner: "" },
+  "Uke 49": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", image2: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
+  "Uke 50": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
+  "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", winner: "" }
 };
 
 const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
@@ -167,7 +167,7 @@ export default function App() {
 
   const [prizes, setPrizes] = useState(() => {
     try {
-      const saved = localStorage.getItem('vinlotteri_prizes_v2');
+      const saved = localStorage.getItem('vinlotteri_prizes_v3');
       return saved ? JSON.parse(saved) : defaultPrizes;
     } catch (e) {
       return defaultPrizes;
@@ -200,7 +200,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('vinlotteri_prizes_v2', JSON.stringify(prizes));
+      localStorage.setItem('vinlotteri_prizes_v3', JSON.stringify(prizes));
     } catch (e) {}
   }, [prizes]);
 
@@ -273,7 +273,7 @@ export default function App() {
       setWeeklyData(exactDataFromImage);
       setPrizes(defaultPrizes);
       localStorage.removeItem('vinlotteri_fixed_v4');
-      localStorage.removeItem('vinlotteri_prizes_v2');
+      localStorage.removeItem('vinlotteri_prizes_v3');
       setCurrentWinner(null);
       alert("Alt er tilbakestilt!");
     }
@@ -306,25 +306,22 @@ export default function App() {
     setIsSpinning(true);
     setCurrentWinner(null);
 
-    // Velg tilfeldig vinner blant KUN de solgte loddene
     const winningTicket = soldTicketsInActiveWeek[Math.floor(Math.random() * soldTicketsInActiveWeek.length)];
     const winNumStr = winningTicket.ticketNum.toString().padStart(2, '0');
 
     let counter = 0;
     const interval = setInterval(() => {
-      // Snurrer tilfeldige tall under animasjonen
       const randomTens = Math.floor(Math.random() * 5).toString();
       const randomOnes = Math.floor(Math.random() * 10).toString();
       setSlotDisplay({ tens: randomTens, ones: randomOnes });
 
       counter += 100;
-      if (counter >= 3000) { // 3 sekunder snurring
+      if (counter >= 3000) {
         clearInterval(interval);
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setCurrentWinner(winningTicket);
         setIsSpinning(false);
 
-        // Oppdaterer vinnerlisten i premier automatisk
         setPrizes(prev => ({
           ...prev,
           [activeWeek]: {
@@ -346,6 +343,16 @@ export default function App() {
     }));
   };
 
+  // Funksjon for å håndtere direkte kamera/bildeopplasting fra mobil
+  const handleImageUpload = (week, imageKey, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      updatePrize(week, imageKey, reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const currentPrize = prizes[activeWeek] || {};
 
   return (
@@ -365,7 +372,7 @@ export default function App() {
             className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
           >
             <span>🍷</span>
-            <span>Ukens Premie ({activeWeek})</span>
+            <span>Ukens Premier ({activeWeek})</span>
           </button>
 
           <button 
@@ -420,37 +427,30 @@ export default function App() {
               </button>
             </div>
             
-            {/* SPILLEMASKIN (ENARMET BANDITT) */}
             <div className="flex flex-col items-center justify-center space-y-4 py-2">
               <div className="bg-slate-950 border-4 border-amber-500/80 p-6 rounded-3xl shadow-2xl flex items-center space-x-6 relative">
-                
-                {/* Lys på maskinen */}
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-500 text-slate-950 font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
                   {isSpinning ? "SNURRER..." : "KLAR TIL TREKNING"}
                 </div>
 
-                {/* Tall-hjul 1 */}
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
                   <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
                     {slotDisplay.tens}
                   </span>
                 </div>
 
-                {/* Tall-hjul 2 */}
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
                   <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
                     {slotDisplay.ones}
                   </span>
                 </div>
 
-                {/* Spak på siden (Den enarmede banditten) */}
                 <div className="hidden md:flex flex-col items-center">
                   <div className="w-3 h-16 bg-slate-700 rounded-t-full border border-slate-600"></div>
                   <div className="w-8 h-8 bg-rose-600 rounded-full border-2 border-rose-400 shadow-lg -mt-2"></div>
                 </div>
               </div>
 
-              {/* Startknapp for trekning */}
               <button 
                 onClick={startSlotMachine}
                 disabled={isSpinning}
@@ -459,7 +459,6 @@ export default function App() {
                 {isSpinning ? "🎰 Trekker vinner..." : `🎰 DRA I SPAKEN (TREKK ${activeWeek.toUpperCase()})`}
               </button>
 
-              {/* Vinner-banner */}
               {currentWinner && !isSpinning && (
                 <div className="bg-emerald-950/90 border-2 border-emerald-400 px-8 py-3 rounded-2xl text-center space-y-1 shadow-2xl animate-bounce">
                   <p className="text-emerald-400 text-xs font-extrabold uppercase tracking-widest">🎉 GRATULERER TIL VINNEREN! 🎉</p>
@@ -543,14 +542,14 @@ export default function App() {
 
       </main>
 
-      {/* UKENS PREMIE MODAL (MED 2 BILDER) */}
+      {/* UKENS PREMIE MODAL (MED KAMERAUPPLASTING FOR 2 FLASKER) */}
       {showPrizeModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-2xl shadow-2xl space-y-6">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div>
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">{activeWeek}</span>
-                <h2 className="text-2xl font-black text-white">{currentPrize.title || "Ukens Premie"}</h2>
+                <h2 className="text-2xl font-black text-white">{currentPrize.title || "2 Flasker Vin"}</h2>
               </div>
               <button 
                 onClick={() => setShowPrizeModal(false)}
@@ -560,48 +559,75 @@ export default function App() {
               </button>
             </div>
 
+            {/* Bildevisning for Flaske 1 og Flaske 2 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="h-56 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
-                {currentPrize.image1 ? (
-                  <img src={currentPrize.image1} alt="Vin bilde 1" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="text-slate-600 text-sm">Ingen Bilde 1</div>
-                )}
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-amber-400 text-center uppercase">🍾 Flaske 1</p>
+                <div className="h-60 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
+                  {currentPrize.image1 ? (
+                    <img src={currentPrize.image1} alt="Flaske 1" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-slate-600 text-sm">Ingen bilde av flaske 1</div>
+                  )}
+                </div>
               </div>
-              <div className="h-56 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
-                {currentPrize.image2 ? (
-                  <img src={currentPrize.image2} alt="Vin bilde 2" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="text-slate-600 text-sm">Ingen Bilde 2</div>
-                )}
+
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-amber-400 text-center uppercase">🍾 Flaske 2</p>
+                <div className="h-60 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
+                  {currentPrize.image2 ? (
+                    <img src={currentPrize.image2} alt="Flaske 2" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-slate-600 text-sm">Ingen bilde av flaske 2</div>
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* ADMIN KAMERA OG TITTEL-REDIGERING */}
             {isAdminUnlocked && (
-              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
-                <p className="text-xs font-bold text-amber-400 uppercase">✏️ Admin: Rediger Premier for {activeWeek}</p>
-                <div className="space-y-2">
-                  <input 
-                    type="text" 
-                    placeholder="Premietittel..." 
-                    value={currentPrize.title || ""} 
-                    onChange={(e) => updatePrize(activeWeek, "title", e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Bilde 1 URL (https://...)" 
-                    value={currentPrize.image1 || ""} 
-                    onChange={(e) => updatePrize(activeWeek, "image1", e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Bilde 2 URL (https://...)" 
-                    value={currentPrize.image2 || ""} 
-                    onChange={(e) => updatePrize(activeWeek, "image2", e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-                  />
+              <div className="p-4 bg-slate-950 border border-amber-500/40 rounded-xl space-y-4">
+                <p className="text-xs font-black text-amber-400 uppercase flex items-center space-x-1">
+                  <span>📸 Admin: Ta bilde eller velg fil ({activeWeek})</span>
+                </p>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] text-slate-400 font-bold block mb-1">Premietittel:</label>
+                    <input 
+                      type="text" 
+                      placeholder="F.eks. 2 Flasker Marques de Chive..." 
+                      value={currentPrize.title || ""} 
+                      onChange={(e) => updatePrize(activeWeek, "title", e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Bilde 1 / Kamera 1 */}
+                    <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-1">
+                      <span className="text-[10px] font-bold text-slate-300 block">📷 Ta bilde av Flaske 1:</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="environment"
+                        onChange={(e) => handleImageUpload(activeWeek, "image1", e.target.files[0])}
+                        className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-600 cursor-pointer w-full"
+                      />
+                    </div>
+
+                    {/* Bilde 2 / Kamera 2 */}
+                    <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-1">
+                      <span className="text-[10px] font-bold text-slate-300 block">📷 Ta bilde av Flaske 2:</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="environment"
+                        onChange={(e) => handleImageUpload(activeWeek, "image2", e.target.files[0])}
+                        className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-600 cursor-pointer w-full"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -632,7 +658,7 @@ export default function App() {
                   <div key={week} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <span className="text-xs font-black text-amber-400 uppercase">{week}</span>
-                      <p className="text-sm font-bold text-white">{prize.title || "Premie"}</p>
+                      <p className="text-sm font-bold text-white">{prize.title || "2 Flasker Vin"}</p>
                     </div>
 
                     <div className="flex-1 sm:text-right">
