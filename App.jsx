@@ -154,6 +154,7 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
+// DISKRÉ SPILLEMASKIN-KLIKK UNDER TREKNINGEN
 let audioCtx = null;
 const playClickSound = () => {
   try {
@@ -164,8 +165,8 @@ const playClickSound = () => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(500, now);
-    gain.gain.setValueAtTime(0.03, now);
+    osc.frequency.setValueAtTime(520, now);
+    gain.gain.setValueAtTime(0.02, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -174,45 +175,20 @@ const playClickSound = () => {
   } catch(e) {}
 };
 
-// MYK DAMESTEMME MED EKSTRA SIKRING FOR KVINNELIG VOKAL
-const speakSoftFemaleVoice = (text, pitch = 1.2, rate = 0.8) => {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'nb-NO';
-    utterance.pitch = pitch; // Høyere tonehøyde for å garantere en myk kvinnelig klang
-    utterance.rate = rate;   // Rolig tempo
-
-    const voices = window.speechSynthesis.getVoices();
-    
-    // Norske kvinnestemmer eller generelle kvinnestemmer
-    const femaleKeywords = ['nora', 'hedda', 'zira', 'iselin', 'lene', 'hanna', 'ingrid', 'siri', 'female', 'kvinne', 'girl', 'woman'];
-    const maleKeywords = ['jon', 'stian', 'sverre', 'male', 'mann', 'boy', 'man', 'david', 'george', 'mark'];
-
-    // 1. Prøv å finne en eksplisitt norsk kvinnestemme
-    let selectedVoice = voices.find(v => 
-      (v.lang.includes('nb') || v.lang.includes('no')) &&
-      femaleKeywords.some(kw => v.name.toLowerCase().includes(kw))
-    );
-
-    // 2. Hvis ingen treff på navn, velg en norsk stemme som IKKE har mannlige nøkkelord
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => 
-        (v.lang.includes('nb') || v.lang.includes('no')) &&
-        !maleKeywords.some(kw => v.name.toLowerCase().includes(kw))
-      );
-    }
-
-    // 3. Reserveløsning: Hvilken som helst kvinne-stemme
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
-    }
-
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-
-    window.speechSynthesis.speak(utterance);
+// AVSPILLING AV DIN EGEN INNSPILTE LYDFIL (vinner.mp3)
+const playCustomAudio = (startTime = 0) => {
+  try {
+    const audio = new Audio('./vinner.mp3');
+    audio.currentTime = startTime;
+    audio.play().catch(() => {
+      // Fallback hvis stien vinner.mp3 ligger i roten
+      const fallbackAudio = new Audio('./public/vinner.mp3');
+      fallbackAudio.currentTime = startTime;
+      fallbackAudio.play().catch(() => {});
+    });
+    return audio;
+  } catch (e) {
+    return null;
   }
 };
 
@@ -255,15 +231,6 @@ export default function App() {
   
   const [revealModal, setRevealModal] = useState({ show: false, bottle: 1, name: "", ticket: null, stage: "drumroll" });
   const [showConfirmDraw, setShowConfirmDraw] = useState(false);
-
-  useEffect(() => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.getVoices();
-      };
-    }
-  }, []);
 
   useEffect(() => {
     try {
@@ -408,16 +375,14 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
+        // 1. Åpne "Og vinneren er..." vinduet og spil av din stemme (fra start til ca. 3.5 sekunder)
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
+        
+        const audio = playCustomAudio(0); // Spiller innspilt stemme "Og vinneren er..."
 
-        // MYK DAMESTEMME: "Og vinneren er..."
-        speakSoftFemaleVoice(`Og vinneren er...`, 1.25, 0.75);
-
-        // Avslør og rop opp navnet etter en spennende pause
+        // 2. Etter 3.2 sekunder avsløres navnet på skjermen samtidig som klappingen i opptaket ditt inntreffer!
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
-          
-          speakSoftFemaleVoice(`${winningTicket.owner}`, 1.3, 0.85);
 
           if (flaskeNummer === 1) {
             setTempWinner1(winningTicket);
@@ -425,7 +390,7 @@ export default function App() {
             setTempWinner2(winningTicket);
             setShowConfirmDraw(true);
           }
-        }, 3500);
+        }, 3200);
       }
     }, 80);
   };
@@ -697,7 +662,7 @@ export default function App() {
 
       </main>
 
-      {/* REVEAL-MODAL MED MYK DAMESTEMME */}
+      {/* REVEAL-MODAL MED AVSPILLING AV DIN EGEN INNSPILTE STEMME M/ KLAPPING */}
       {revealModal.show && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border-4 border-amber-400 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.3)]">
