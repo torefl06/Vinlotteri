@@ -154,112 +154,23 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
-// AUTENTISK LYDMOTOR (STØYBASERT TROMMEVIRVEL OG APPLAUS)
-let audioCtx = null;
-
-const getAudioContext = () => {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  return audioCtx;
-};
-
-// Genererer hvit støy for ekte akustisk trommeskinn og klapping
-const createNoiseBuffer = (ctx) => {
-  const bufferSize = ctx.sampleRate * 2;
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = Math.random() * 2 - 1;
-  }
-  return buffer;
-};
-
-const playSound = (type) => {
-  try {
-    const ctx = getAudioContext();
-    const now = ctx.currentTime;
-
-    if (type === 'tick') {
-      // Diskré mekanisk klikk for spillemaskinen
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(400, now);
-      gain.gain.setValueAtTime(0.04, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.03);
-    } else if (type === 'drumroll') {
-      // EKTE TROMMEVIRVEL: Snare-tromme støybyger som akselererer i 3.5 sekunder
-      const noiseBuffer = createNoiseBuffer(ctx);
-      const totalHits = 50;
-      for (let i = 0; i < totalHits; i++) {
-        const hitTime = now + (i * 0.07);
-        const noise = ctx.createBufferSource();
-        noise.buffer = noiseBuffer;
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'highpass';
-        filter.frequency.value = 1000;
-
-        const gain = ctx.createGain();
-        const hitVol = 0.03 + (i / totalHits) * 0.08; // Bygger opp volumet mot slutten!
-        gain.gain.setValueAtTime(hitVol, hitTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, hitTime + 0.05);
-
-        noise.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-
-        noise.start(hitTime);
-        noise.stop(hitTime + 0.05);
-      }
-    } else if (type === 'cheer') {
-      // EKTE APPLAUS: Mange hundre tilfeldige håndklapp flettet sammen i 2 sekunder
-      const noiseBuffer = createNoiseBuffer(ctx);
-      for (let i = 0; i < 80; i++) {
-        const clapTime = now + (Math.random() * 1.8);
-        const noise = ctx.createBufferSource();
-        noise.buffer = noiseBuffer;
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.value = 800 + Math.random() * 1200;
-
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.08 + Math.random() * 0.05, clapTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, clapTime + 0.08);
-
-        noise.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-
-        noise.start(clapTime);
-        noise.stop(clapTime + 0.08);
-      }
-
-      // Festlig trompetsignal oppå klappingen
-      const notes = [523.25, 659.25, 783.99, 1046.50];
-      notes.forEach((freq, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
-        gain.gain.setValueAtTime(0.12, now + idx * 0.12);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.5);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + idx * 0.12);
-        osc.stop(now + idx * 0.12 + 0.5);
-      });
+// FUNKSJON FOR Å SNAKKE MED NORSK STEMME
+const speakText = (text, rate = 1) => {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel(); // Stopp eventuell pågående tale
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'nb-NO'; // Norsk bokmål
+    utterance.rate = rate; // Hastighet
+    
+    // Velg en norsk stemme hvis tilgjengelig
+    const voices = window.speechSynthesis.getVoices();
+    const noVoice = voices.find(v => v.lang.includes('nb') || v.lang.includes('no'));
+    if (noVoice) {
+      utterance.voice = noVoice;
     }
-  } catch (e) {}
+    
+    window.speechSynthesis.speak(utterance);
+  }
 };
 
 export default function App() {
@@ -301,6 +212,15 @@ export default function App() {
   
   const [revealModal, setRevealModal] = useState({ show: false, bottle: 1, name: "", ticket: null, stage: "drumroll" });
   const [showConfirmDraw, setShowConfirmDraw] = useState(false);
+
+  useEffect(() => {
+    // Last inn stemmer på nytt om nettleseren bruker litt tid på å hente dem
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -408,8 +328,6 @@ export default function App() {
   );
 
   const startSlotMachine = (flaskeNummer) => {
-    getAudioContext();
-
     if (soldTicketsInActiveWeek.length === 0) {
       alert(`Ingen lodd er solgt for ${activeWeek} ennå!`);
       return;
@@ -431,15 +349,13 @@ export default function App() {
     const winningTicket = pool[Math.floor(Math.random() * pool.length)];
     const winNumStr = winningTicket.ticketNum.toString().padStart(2, '0');
 
-    let duration = 3500; 
+    let duration = 3000; 
     let elapsed = 0;
 
     const timer = setInterval(() => {
       const randomTens = Math.floor(Math.random() * 5).toString();
       const randomOnes = Math.floor(Math.random() * 10).toString();
       setSlotDisplay({ tens: randomTens, ones: randomOnes });
-      
-      playSound('tick');
 
       elapsed += 80;
       if (elapsed >= duration) {
@@ -447,14 +363,18 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // 1. Vis ekte trommevirvel
+        // Vis modalen med "Og vinneren er..."
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
-        playSound('drumroll');
 
-        // 2. Avslør navnet med ekte applaus etter 3.5 sekunder
+        // Stemmen sier introen
+        speakText(`Og vinneren av flaske ${flaskeNummer} er...`, 0.9);
+
+        // Etter 3.5 sekunder ropes vinnerens navn opp
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
-          playSound('cheer');
+          
+          // Stemmen roper vinneren!
+          speakText(`${winningTicket.owner}! Gratulerer!`, 1.0);
 
           if (flaskeNummer === 1) {
             setTempWinner1(winningTicket);
@@ -734,12 +654,12 @@ export default function App() {
 
       </main>
 
-      {/* ROLIG VINNERMODAL M/ EKTE TROMMEVIRVEL OG APPLAUS */}
+      {/* ROLIG VINNERMODAL M/ OPPLEST STEMME */}
       {revealModal.show && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border-4 border-amber-400 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.3)]">
             
-            <div className="text-5xl">🥁</div>
+            <div className="text-5xl">🎙️</div>
             
             {revealModal.stage === "drumroll" ? (
               <div className="space-y-4">
