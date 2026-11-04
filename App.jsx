@@ -287,4 +287,102 @@ export default function App() {
             {!isAdminUnlocked ? (
               <div className="bg-[#111827] p-8 rounded-2xl border border-slate-800 shadow-2xl text-center">
                 <div className="text-4xl mb-3">🔒</div>
-                <h2 className="text
+                <h2 className="text-2xl font-black text-amber-400 mb-2">Admin Tilgang</h2>
+                <p className="text-slate-400 text-sm mb-6">Skriv inn adminkoden for å åpne trekningskontroll og oversikt.</p>
+
+                <form onSubmit={handleAdminUnlock} className="space-y-4 max-w-xs mx-auto">
+                  <input 
+                    type="password"
+                    placeholder="Oppgi adminkode..."
+                    value={adminPasswordInput}
+                    onChange={(e) => setAdminPasswordInput(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white text-center font-mono focus:outline-none focus:border-amber-500"
+                  />
+                  {adminError && <p className="text-rose-400 text-xs">{adminError}</p>}
+                  <button 
+                    type="submit"
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3 rounded-xl transition text-sm"
+                  >
+                    Lås opp Admin
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="bg-[#111827] p-6 rounded-2xl border border-slate-800 shadow-2xl space-y-6">
+                <div className="flex justify-between items-center pb-4 border-b border-slate-800">
+                  <h2 className="text-xl font-bold text-amber-400">👑 Admin Kontrollpanel ({activeWeek})</h2>
+                  <button 
+                    onClick={() => setIsAdminUnlocked(false)}
+                    className="text-xs bg-slate-800 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg"
+                  >
+                    Lås igjen
+                  </button>
+                </div>
+
+                <div className="bg-amber-950/20 border border-amber-500/30 p-4 rounded-xl text-center">
+                  <button 
+                    onClick={drawWinner}
+                    className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-4 rounded-xl text-lg shadow-lg transition transform active:scale-95"
+                  >
+                    🎲 UTFØR OFFISIELL TREKNING FOR {activeWeek.toUpperCase()}
+                  </button>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-slate-300 mb-3">Kjøpere i {activeWeek}:</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    {Object.entries(currentWeekData).map(([name, tickets]) => (
+                      <div key={name} className="flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-800 text-sm">
+                        <span className="font-medium text-white">{name}</span>
+                        <span className="text-amber-400 font-bold bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                          {tickets.length} lodd (#{tickets.join(', #')})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+      </main>
+
+      {/* VIPPS MODAL */}
+      {showVippsModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#111827] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
+            <div className="text-4xl mb-2">📱</div>
+            <h2 className="text-2xl font-black text-amber-400 mb-1">Husk å Vippse!</h2>
+            <p className="text-slate-300 text-sm mb-4">
+              Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
+              Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
+            </p>
+
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
+              <p className="font-bold text-amber-400">Slik gjennomfører du:</p>
+              <p>1. Åpne Vipps-appen på mobilen din.</p>
+              <p>2. Vipps <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til ansvarlig.</p>
+              <p>3. Trykk på bekreftelsen under når du har Vippset.</p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button 
+                onClick={() => setShowVippsModal(false)}
+                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-sm transition"
+              >
+                Avbryt
+              </button>
+              <button 
+                onClick={confirmPurchase}
+                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-sm transition shadow-lg"
+              >
+                Ja, jeg har Vippset!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
