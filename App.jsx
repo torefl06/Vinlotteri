@@ -340,7 +340,6 @@ export default function App() {
     }));
   };
 
-  // Komprimerer kamerabilder automatisk slik at koden og nettsiden laster lynraskt
   const handleImageUpload = (week, imageKey, file) => {
     if (!file) return;
     const reader = new FileReader();
@@ -644,4 +643,121 @@ export default function App() {
       {showWinnersModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-xl shadow-2xl space-y-6">
-            <div
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h2 className="text-2xl font-black text-amber-400 flex items-center space-x-2">
+                <span>🏆 Vinneroversikt (Uke 45–51)</span>
+              </h2>
+              <button 
+                onClick={() => setShowWinnersModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs"
+              >
+                Lukk ✖
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              {weeksList.map(week => {
+                const prize = prizes[week] || {};
+                return (
+                  <div key={week} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-black text-amber-400 uppercase">{week}</span>
+                      <p className="text-sm font-bold text-white">{prize.title || "2 Flasker Vin"}</p>
+                    </div>
+
+                    <div className="flex-1 sm:text-right">
+                      {isAdminUnlocked ? (
+                        <input 
+                          type="text" 
+                          placeholder="Skriv inn vinner..." 
+                          value={prize.winner || ""} 
+                          onChange={(e) => updatePrize(week, "winner", e.target.value)}
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-400 font-bold w-full sm:w-48 text-left sm:text-right"
+                        />
+                      ) : (
+                        <p className={`text-sm font-black ${prize.winner ? 'text-emerald-400' : 'text-slate-600 italic'}`}>
+                          {prize.winner ? `🎉 ${prize.winner}` : "Ikke trukket"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN MODAL */}
+      {showAdminModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold text-amber-400 mb-1">🔒 Admin Innlogging</h2>
+            <p className="text-slate-400 text-xs mb-4">Oppgi adminkoden for å åpne trekningsfunksjonen.</p>
+            <form onSubmit={handleAdminUnlock} className="space-y-3">
+              <input 
+                type="password"
+                placeholder="Skriv inn adminkode..."
+                value={adminPasswordInput}
+                onChange={(e) => setAdminPasswordInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white text-center font-mono focus:outline-none focus:border-amber-500"
+              />
+              {adminError && <p className="text-rose-400 text-xs text-center">{adminError}</p>}
+              <div className="flex space-x-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAdminModal(false)}
+                  className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs"
+                >
+                  Avbryt
+                </button>
+                <button 
+                  type="submit" 
+                  className="w-1/2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-md"
+                >
+                  Lås opp
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIPPS MODAL */}
+      {showVippsModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
+            <div className="text-4xl mb-2">📱</div>
+            <h2 className="text-2xl font-black text-amber-400 mb-1">Husk å Vippse!</h2>
+            <p className="text-slate-300 text-sm mb-4">
+              Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
+              Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
+            </p>
+
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
+              <p className="font-bold text-amber-400">Slik gjør du det:</p>
+              <p>1. Åpne Vipps-appen på mobilen din.</p>
+              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
+              <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button 
+                onClick={() => setShowVippsModal(false)}
+                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-xs transition"
+              >
+                Avbryt
+              </button>
+              <button 
+                onClick={confirmPurchase}
+                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg"
+              >
+                Ja, jeg har Vippset!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
