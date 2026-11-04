@@ -154,7 +154,7 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
-// ROBUST LYDMOTOR FOR BÅDE FLASKE 1 OG FLASKE 2
+// AUTENTISK LYDMOTOR (STØYBASERT TROMMEVIRVEL OG APPLAUS)
 let audioCtx = null;
 
 const getAudioContext = () => {
@@ -167,51 +167,96 @@ const getAudioContext = () => {
   return audioCtx;
 };
 
+// Genererer hvit støy for ekte akustisk trommeskinn og klapping
+const createNoiseBuffer = (ctx) => {
+  const bufferSize = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  return buffer;
+};
+
 const playSound = (type) => {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
 
     if (type === 'tick') {
+      // Diskré mekanisk klikk for spillemaskinen
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(300 + Math.random() * 200, now);
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, now);
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.05);
+      osc.stop(now + 0.03);
     } else if (type === 'drumroll') {
-      // Skaper en jevn trommevirvel i 3.5 sekunder
-      for (let i = 0; i < 45; i++) {
-        const timeOffset = now + i * 0.075;
-        const osc = ctx.createOscillator();
+      // EKTE TROMMEVIRVEL: Snare-tromme støybyger som akselererer i 3.5 sekunder
+      const noiseBuffer = createNoiseBuffer(ctx);
+      const totalHits = 50;
+      for (let i = 0; i < totalHits; i++) {
+        const hitTime = now + (i * 0.07);
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 1000;
+
         const gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(120 + Math.random() * 40, timeOffset);
-        gain.gain.setValueAtTime(0.08, timeOffset);
-        gain.gain.exponentialRampToValueAtTime(0.001, timeOffset + 0.06);
-        osc.connect(gain);
+        const hitVol = 0.03 + (i / totalHits) * 0.08; // Bygger opp volumet mot slutten!
+        gain.gain.setValueAtTime(hitVol, hitTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, hitTime + 0.05);
+
+        noise.connect(filter);
+        filter.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(timeOffset);
-        osc.stop(timeOffset + 0.06);
+
+        noise.start(hitTime);
+        noise.stop(hitTime + 0.05);
       }
     } else if (type === 'cheer') {
-      // Festlig seiersfanfare og jubel
-      const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
+      // EKTE APPLAUS: Mange hundre tilfeldige håndklapp flettet sammen i 2 sekunder
+      const noiseBuffer = createNoiseBuffer(ctx);
+      for (let i = 0; i < 80; i++) {
+        const clapTime = now + (Math.random() * 1.8);
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 800 + Math.random() * 1200;
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.08 + Math.random() * 0.05, clapTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, clapTime + 0.08);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        noise.start(clapTime);
+        noise.stop(clapTime + 0.08);
+      }
+
+      // Festlig trompetsignal oppå klappingen
+      const notes = [523.25, 659.25, 783.99, 1046.50];
       notes.forEach((freq, idx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
-        gain.gain.setValueAtTime(0.2, now + idx * 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.8);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+        gain.gain.setValueAtTime(0.12, now + idx * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.5);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(now + idx * 0.1);
-        osc.stop(now + idx * 0.1 + 0.8);
+        osc.start(now + idx * 0.12);
+        osc.stop(now + idx * 0.12 + 0.5);
       });
     }
   } catch (e) {}
@@ -363,7 +408,6 @@ export default function App() {
   );
 
   const startSlotMachine = (flaskeNummer) => {
-    // Tvinger opplysing av lydkontekst ved hver knappetrykk
     getAudioContext();
 
     if (soldTicketsInActiveWeek.length === 0) {
@@ -387,7 +431,7 @@ export default function App() {
     const winningTicket = pool[Math.floor(Math.random() * pool.length)];
     const winNumStr = winningTicket.ticketNum.toString().padStart(2, '0');
 
-    let duration = 4000; 
+    let duration = 3500; 
     let elapsed = 0;
 
     const timer = setInterval(() => {
@@ -403,11 +447,11 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // 1. Vis trommevirvel-fase
+        // 1. Vis ekte trommevirvel
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         playSound('drumroll');
 
-        // 2. Avslør navnet etter 3.5 sekunder
+        // 2. Avslør navnet med ekte applaus etter 3.5 sekunder
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
           playSound('cheer');
@@ -528,7 +572,7 @@ export default function App() {
           <div className="bg-gradient-to-b from-amber-950/40 to-slate-900/90 border-2 border-amber-500/50 p-6 rounded-2xl shadow-2xl space-y-6">
             <div className="flex justify-between items-center border-b border-amber-500/30 pb-3">
               <h2 className="text-lg font-black text-amber-400 flex items-center space-x-2">
-                <span>🎰 Tivoli & Enarmet Banditt - Trekning ({activeWeek})</span>
+                <span>🎰 Enarmet Banditt - Trekning ({activeWeek})</span>
               </h2>
               <button onClick={resetToInitial} className="text-xs bg-rose-950 hover:bg-rose-900 text-rose-300 px-3 py-1 rounded-lg border border-rose-800 font-bold">
                 🔄 Tilbakestill alt
@@ -538,7 +582,7 @@ export default function App() {
             <div className="flex flex-col items-center justify-center space-y-6 py-2">
               <div className="bg-slate-950 border-4 border-amber-500/80 p-6 rounded-3xl shadow-2xl flex items-center space-x-6 relative">
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-500 text-slate-950 font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
-                  {isSpinning ? "🎪 TIVOLI-TREKNING PÅGÅR..." : "KLAR TIL TREKNING"}
+                  {isSpinning ? "🎰 TREKNING PÅGÅR..." : "KLAR TIL TREKNING"}
                 </div>
 
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
@@ -690,7 +734,7 @@ export default function App() {
 
       </main>
 
-      {/* ROLIG, ELEGANT & STILLEDSTÅENDE VINNERBOKS MED LYSENDE NAVN (INGEN HOPPING) */}
+      {/* ROLIG VINNERMODAL M/ EKTE TROMMEVIRVEL OG APPLAUS */}
       {revealModal.show && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border-4 border-amber-400 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.3)]">
@@ -711,7 +755,6 @@ export default function App() {
                   🎉 VINNER FLASKE {revealModal.bottle} 🎉
                 </span>
                 
-                {/* LYSENDE MÅLSTREK-NAVN SOM STÅR HELT STILLE */}
                 <div className="py-4 bg-slate-950/80 border border-amber-500/40 rounded-2xl shadow-inner">
                   <h2 className="text-4xl md:text-5xl font-black text-amber-300 drop-shadow-[0_0_15px_rgba(252,211,77,0.8)] tracking-tight">
                     {revealModal.name}
