@@ -154,7 +154,6 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
-// HELPER FOR LYDEFFEKTER VIA WEB AUDIO API
 const playSound = (type) => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -234,7 +233,6 @@ export default function App() {
   const [adminError, setAdminError] = useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
 
-  // Spillemaskin & Avsløring
   const [isSpinning, setIsSpinning] = useState(false);
   const [slotDisplay, setSlotDisplay] = useState({ tens: "0", ones: "0" });
   const [tempWinner1, setTempWinner1] = useState(null);
@@ -348,7 +346,6 @@ export default function App() {
     Array.isArray(tickets) ? tickets.map(t => ({ ticketNum: t, owner: name })) : []
   );
 
-  // TREKNING MED TIVOLI-LYD OG AVSLØRINGSBOBLE
   const startSlotMachine = (flaskeNummer) => {
     if (soldTicketsInActiveWeek.length === 0) {
       alert(`Ingen lodd er solgt for ${activeWeek} ennå!`);
@@ -379,7 +376,7 @@ export default function App() {
       const randomOnes = Math.floor(Math.random() * 10).toString();
       setSlotDisplay({ tens: randomTens, ones: randomOnes });
       
-      playSound('tick'); // Tivolilyd/klikk mens den snurrer
+      playSound('tick');
 
       elapsed += 80;
       if (elapsed >= duration) {
@@ -387,12 +384,10 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // 1. Vis først "Og vinneren er..." med trommevirvel i 3.5 sekunder
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         playSound('drumroll');
 
         setTimeout(() => {
-          // 2. Avslør navnet med jubel og applaus!
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
           playSound('cheer');
 
@@ -522,7 +517,7 @@ export default function App() {
             <div className="flex flex-col items-center justify-center space-y-6 py-2">
               <div className="bg-slate-950 border-4 border-amber-500/80 p-6 rounded-3xl shadow-2xl flex items-center space-x-6 relative">
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-500 text-slate-950 font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
-                  {isSpinning ? "🎪 TIVOLI-TREKNING PAAGÅR..." : "KLAR TIL TREKNING"}
+                  {isSpinning ? "🎪 TIVOLI-TREKNING PÅGÅR..." : "KLAR TIL TREKNING"}
                 </div>
 
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
@@ -615,8 +610,9 @@ export default function App() {
           </div>
 
           <div className="flex items-center space-x-6">
+            {/* OPPDATERT FARGEFORKLARING */}
             <div className="flex items-center space-x-4 text-xs">
-              <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-slate-950 border border-slate-800"></span><span className="text-slate-400">Ledig</span></div>
+              <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-emerald-950 border border-emerald-800"></span><span className="text-emerald-400 font-bold">Ledig</span></div>
               <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-amber-500"></span><span className="text-amber-400 font-bold">Valgt</span></div>
               <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-rose-950 border border-rose-800"></span><span className="text-rose-400">Opptatt</span></div>
             </div>
@@ -649,7 +645,8 @@ export default function App() {
               const owner = getTicketOwner(activeWeek, num);
               const isSelectedByMe = (selectedTickets[activeWeek] || []).includes(num);
 
-              let boxStyle = "bg-slate-950 border-slate-800/80 text-amber-400 hover:border-amber-500/50 hover:bg-slate-900";
+              // NÅ ER LEDIGE LODD GRØNNE 🟢
+              let boxStyle = "bg-emerald-950/40 border-emerald-800/80 text-emerald-400 hover:border-emerald-500 hover:bg-emerald-900/50";
               if (owner) {
                 boxStyle = "bg-rose-950/30 border-rose-900/50 text-rose-300 cursor-not-allowed";
               } else if (isSelectedByMe) {
@@ -868,51 +865,4 @@ export default function App() {
                 </button>
                 <button 
                   type="submit" 
-                  className="w-1/2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-md"
-                >
-                  Lås opp
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* VIPPS MODAL */}
-      {showVippsModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
-            <div className="text-4xl mb-2">📱</div>
-            <h2 className="text-2xl font-black text-amber-400 mb-1">Husk å Vippse!</h2>
-            <p className="text-slate-300 text-sm mb-4">
-              Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
-              Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
-            </p>
-
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
-              <p className="font-bold text-amber-400">Slik gjør du det:</p>
-              <p>1. Åpne Vipps-appen på mobilen din.</p>
-              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
-              <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
-            </div>
-
-            <div className="flex space-x-3">
-              <button 
-                onClick={() => setShowVippsModal(false)}
-                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-xs transition"
-              >
-                Avbryt
-              </button>
-              <button 
-                onClick={confirmPurchase}
-                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg"
-              >
-                Ja, jeg har Vippset!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-} 
+                  className="w
