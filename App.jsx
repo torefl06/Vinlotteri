@@ -155,6 +155,10 @@ const initialFeedback = [
   { id: 2, name: "Ingrid", text: "De andre vinner jo alltid.", date: "Standard" }
 ];
 
+const initialBuyTips = [
+  { id: 1, name: "Tore", tip: "Marqués de Chive Crianza", price: "130", date: "Standard" }
+];
+
 const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
@@ -207,10 +211,22 @@ export default function App() {
     }
   });
 
+  const [buyTipsList, setBuyTipsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vinlotteri_buy_tips_v1');
+      return saved ? JSON.parse(saved) : initialBuyTips;
+    } catch (e) {
+      return initialBuyTips;
+    }
+  });
+
   const [activeWeek, setActiveWeek] = useState("Uke 45");
   const [buyerName, setBuyerName] = useState("");
   const [selectedTickets, setSelectedTickets] = useState({});
+  
   const [newFeedbackText, setNewFeedbackText] = useState("");
+  const [newTipText, setNewTipText] = useState("");
+  const [newTipPrice, setNewTipPrice] = useState("");
   
   const [showVippsModal, setShowVippsModal] = useState(false);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
@@ -218,6 +234,7 @@ export default function App() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showBuyTipsModal, setShowBuyTipsModal] = useState(false);
   
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
   const [adminError, setAdminError] = useState("");
@@ -255,6 +272,12 @@ export default function App() {
       localStorage.setItem('vinlotteri_feedback_v1', JSON.stringify(feedbackList));
     } catch (e) {}
   }, [feedbackList]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vinlotteri_buy_tips_v1', JSON.stringify(buyTipsList));
+    } catch (e) {}
+  }, [buyTipsList]);
 
   const getTicketOwner = (week, ticketNum) => {
     const weekObj = weeklyData[week] || {};
@@ -309,6 +332,30 @@ export default function App() {
     setNewFeedbackText("");
   };
 
+  const handleAddBuyTip = (e) => {
+    e.preventDefault();
+    if (!buyerName.trim()) {
+      alert("Vennligst skriv inn navnet ditt først!");
+      return;
+    }
+    if (!newTipText.trim()) {
+      alert("Skriv inn et tips til hva vi bør kjøpe.");
+      return;
+    }
+
+    const newEntry = {
+      id: Date.now(),
+      name: buyerName.trim(),
+      tip: newTipText.trim(),
+      price: newTipPrice.trim(),
+      date: new Date().toLocaleDateString('no-NO', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setBuyTipsList([newEntry, ...buyTipsList]);
+    setNewTipText("");
+    setNewTipPrice("");
+  };
+
   const totalSelectedCount = Object.values(selectedTickets).reduce((acc, arr) => acc + (arr ? arr.length : 0), 0);
   const currentWeekData = weeklyData[activeWeek] || {};
   const soldCountInActiveWeek = Object.values(currentWeekData).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
@@ -347,9 +394,11 @@ export default function App() {
       setWeeklyData(exactDataFromImage);
       setPrizes(defaultPrizes);
       setFeedbackList(initialFeedback);
+      setBuyTipsList(initialBuyTips);
       localStorage.removeItem('vinlotteri_fixed_v4');
       localStorage.removeItem('vinlotteri_prizes_v3');
       localStorage.removeItem('vinlotteri_feedback_v1');
+      localStorage.removeItem('vinlotteri_buy_tips_v1');
       setTempWinner1(null);
       setTempWinner2(null);
       setShowConfirmDraw(false);
@@ -487,7 +536,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 font-sans pb-12">
       
-      {/* MOBILVENNLIG HEADER */}
+      {/* HEADER */}
       <header className="bg-[#0f172a] border-b border-slate-800 px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
         <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
           <div className="flex items-center space-x-2">
@@ -504,8 +553,16 @@ export default function App() {
           </div>
         </div>
 
-        {/* HORISONTALT SKROLLBAR MENY PÅ MOBIL */}
+        {/* TOPPMENY */}
         <div className="flex items-center space-x-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
+          <button 
+            onClick={() => setShowBuyTipsModal(true)}
+            className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center space-x-1"
+          >
+            <span>🍷</span>
+            <span>Kjøpetips</span>
+          </button>
+
           <button 
             onClick={() => setShowFeedbackModal(true)}
             className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center space-x-1"
@@ -526,7 +583,7 @@ export default function App() {
             onClick={() => setShowPrizeModal(true)}
             className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center space-x-1"
           >
-            <span>🍷</span>
+            <span>🍾</span>
             <span>Premier</span>
           </button>
 
@@ -555,7 +612,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* UKE-VELGER (SKROLLBAR) */}
+      {/* UKE-VELGER */}
       <div className="bg-[#0f172a]/70 border-b border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto scrollbar-none">
         <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mr-1 whitespace-nowrap">Uke:</span>
         {weeksList.map(w => (
@@ -714,6 +771,77 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* KJØPETIPS MODAL */}
+      {showBuyTipsModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/30 p-5 rounded-2xl w-full max-w-lg shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <h2 className="text-base font-black text-amber-400 flex items-center space-x-1">
+                <span>🍷 Kjøpetips til Vingeneralen</span>
+              </h2>
+              <button onClick={() => setShowBuyTipsModal(false)} className="bg-slate-800 text-slate-300 font-bold px-3 py-1 rounded-xl text-xs">Lukk ✖</button>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-xl text-xs text-slate-200 leading-relaxed">
+              Vinlotteriet er stadig på utkikk etter vin av beste kvalitet og nå kan du være med å bidra. Legg igjen tips til gode viner, cider eller til og med øl som du mener burde være i premiepotten.
+            </div>
+
+            <form onSubmit={handleAddBuyTip} className="space-y-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Ditt Navn:</label>
+                <input 
+                  type="text" 
+                  placeholder="Skriv navnet ditt her..." 
+                  value={buyerName}
+                  onChange={(e) => setBuyerName(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Tips til hva en kan kjøpe:</label>
+                  <input 
+                    type="text" 
+                    placeholder="F.eks. Faustino I Gran Reserva..." 
+                    value={newTipText} 
+                    onChange={(e) => setNewTipText(e.target.value)} 
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Pris (kr):</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ca. kr..." 
+                    value={newTipPrice} 
+                    onChange={(e) => setNewTipPrice(e.target.value)} 
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-amber-500 text-slate-950 font-black py-2 rounded-xl text-xs shadow-md">Send kjøpetips 🍷</button>
+            </form>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {buyTipsList.map(item => (
+                <div key={item.id} className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl space-y-1">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="font-bold text-amber-400">{item.name}</span>
+                    <span className="text-slate-500">{item.date}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <p className="text-slate-200 font-bold">🍾 {item.tip}</p>
+                    {item.price && <span className="bg-emerald-950 text-emerald-400 font-extrabold px-2 py-0.5 rounded-md text-[10px] border border-emerald-800">{item.price} kr</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* RIS & ROS MODAL */}
       {showFeedbackModal && (
