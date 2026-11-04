@@ -278,11 +278,12 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl flex items-center space-x-2 text-xs">
-            <span className="text-amber-400 font-bold">🎟️ {activeWeek}:</span>
-            <span className="font-extrabold text-white">{soldCountInActiveWeek} / {MAX_TICKETS} lodd solgt</span>
-          </div>
+        <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
+  <p className="font-bold text-amber-400">Slik gjør du det:</p>
+  <p>1. Åpne Vipps-appen på mobilen din.</p>
+  <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
+  <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
+</div>
 
           <button 
             onClick={() => {
