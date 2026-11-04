@@ -154,48 +154,64 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
+// ROBUST LYDMOTOR FOR BÅDE FLASKE 1 OG FLASKE 2
+let audioCtx = null;
+
+const getAudioContext = () => {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+};
+
 const playSound = (type) => {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
     if (type === 'tick') {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(300 + Math.random() * 200, ctx.currentTime);
-      gain.gain.setValueAtTime(0.05, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      osc.frequency.setValueAtTime(300 + Math.random() * 200, now);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.05);
+      osc.start(now);
+      osc.stop(now + 0.05);
     } else if (type === 'drumroll') {
-      let now = ctx.currentTime;
-      for (let i = 0; i < 30; i++) {
+      // Skaper en jevn trommevirvel i 3.5 sekunder
+      for (let i = 0; i < 45; i++) {
+        const timeOffset = now + i * 0.075;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(100 + Math.random() * 30, now + i * 0.1);
-        gain.gain.setValueAtTime(0.08, now + i * 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.08);
+        osc.frequency.setValueAtTime(120 + Math.random() * 40, timeOffset);
+        gain.gain.setValueAtTime(0.08, timeOffset);
+        gain.gain.exponentialRampToValueAtTime(0.001, timeOffset + 0.06);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(now + i * 0.1);
-        osc.stop(now + i * 0.1 + 0.08);
+        osc.start(timeOffset);
+        osc.stop(timeOffset + 0.06);
       }
     } else if (type === 'cheer') {
-      const now = ctx.currentTime;
-      const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
+      // Festlig seiersfanfare og jubel
+      const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
       notes.forEach((freq, idx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
-        gain.gain.setValueAtTime(0.15, now + idx * 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.6);
+        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+        gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.8);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(now + idx * 0.08);
-        osc.stop(now + idx * 0.08 + 0.6);
+        osc.start(now + idx * 0.1);
+        osc.stop(now + idx * 0.1 + 0.8);
       });
     }
   } catch (e) {}
@@ -347,6 +363,9 @@ export default function App() {
   );
 
   const startSlotMachine = (flaskeNummer) => {
+    // Tvinger opplysing av lydkontekst ved hver knappetrykk
+    getAudioContext();
+
     if (soldTicketsInActiveWeek.length === 0) {
       alert(`Ingen lodd er solgt for ${activeWeek} ennå!`);
       return;
@@ -384,9 +403,11 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
+        // 1. Vis trommevirvel-fase
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         playSound('drumroll');
 
+        // 2. Avslør navnet etter 3.5 sekunder
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
           playSound('cheer');
@@ -521,13 +542,13 @@ export default function App() {
                 </div>
 
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
-                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-bounce' : ''}`}>
+                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
                     {slotDisplay.tens}
                   </span>
                 </div>
 
                 <div className="w-20 h-28 bg-black border-2 border-slate-800 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
-                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-bounce' : ''}`}>
+                  <span className={`text-6xl font-black font-mono text-amber-400 ${isSpinning ? 'animate-pulse' : ''}`}>
                     {slotDisplay.ones}
                   </span>
                 </div>
@@ -669,27 +690,39 @@ export default function App() {
 
       </main>
 
-      {/* REVEAL MODAL MED TROMMEVIRVEL & APPLAUS */}
+      {/* ROLIG, ELEGANT & STILLEDSTÅENDE VINNERBOKS MED LYSENDE NAVN (INGEN HOPPING) */}
       {revealModal.show && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border-4 border-amber-500 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-2xl animate-bounce">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border-4 border-amber-400 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.3)]">
             
-            <span className="text-5xl block">🥁</span>
+            <div className="text-5xl">🥁</div>
             
             {revealModal.stage === "drumroll" ? (
               <div className="space-y-4">
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">LODD #{revealModal.ticket} TRUKKET FOR FLASKE {revealModal.bottle}!</span>
-                <h2 className="text-3xl font-black text-white animate-pulse">Og vinneren er...</h2>
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
+                  LODD #{revealModal.ticket} TRUKKET FOR FLASKE {revealModal.bottle}!
+                </span>
+                <h2 className="text-3xl font-black text-white">Og vinneren er...</h2>
                 <p className="text-xs text-slate-400 italic">Hold pusten! Navnet avsløres om et øyeblikk...</p>
               </div>
             ) : (
-              <div className="space-y-4 animate-scale-up">
-                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">🎉 VINNER FLASKE {revealModal.bottle} 🎉</span>
-                <h2 className="text-4xl font-black text-amber-400">{revealModal.name}</h2>
+              <div className="space-y-4">
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
+                  🎉 VINNER FLASKE {revealModal.bottle} 🎉
+                </span>
+                
+                {/* LYSENDE MÅLSTREK-NAVN SOM STÅR HELT STILLE */}
+                <div className="py-4 bg-slate-950/80 border border-amber-500/40 rounded-2xl shadow-inner">
+                  <h2 className="text-4xl md:text-5xl font-black text-amber-300 drop-shadow-[0_0_15px_rgba(252,211,77,0.8)] tracking-tight">
+                    {revealModal.name}
+                  </h2>
+                </div>
+
                 <p className="text-sm font-bold text-slate-200">Lodd #{revealModal.ticket} i {activeWeek}</p>
+                
                 <button 
                   onClick={() => setRevealModal({ ...revealModal, show: false })}
-                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs mt-4 shadow-lg"
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-8 py-3 rounded-xl text-xs mt-4 shadow-lg transform active:scale-95 transition"
                 >
                   Fortsett ➔
                 </button>
