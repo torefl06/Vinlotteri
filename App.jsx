@@ -610,7 +610,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center space-x-6">
-            {/* OPPDATERT FARGEFORKLARING */}
             <div className="flex items-center space-x-4 text-xs">
               <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-emerald-950 border border-emerald-800"></span><span className="text-emerald-400 font-bold">Ledig</span></div>
               <div className="flex items-center space-x-1.5"><span className="w-3.5 h-3.5 rounded-md bg-amber-500"></span><span className="text-amber-400 font-bold">Valgt</span></div>
@@ -645,7 +644,6 @@ export default function App() {
               const owner = getTicketOwner(activeWeek, num);
               const isSelectedByMe = (selectedTickets[activeWeek] || []).includes(num);
 
-              // NÅ ER LEDIGE LODD GRØNNE 🟢
               let boxStyle = "bg-emerald-950/40 border-emerald-800/80 text-emerald-400 hover:border-emerald-500 hover:bg-emerald-900/50";
               if (owner) {
                 boxStyle = "bg-rose-950/30 border-rose-900/50 text-rose-300 cursor-not-allowed";
@@ -865,4 +863,51 @@ export default function App() {
                 </button>
                 <button 
                   type="submit" 
-                  className="w
+                  className="w-1/2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-md"
+                >
+                  Lås opp
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIPPS MODAL */}
+      {showVippsModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
+            <div className="text-4xl mb-2">📱</div>
+            <h2 className="text-2xl font-black text-amber-400 mb-1">Husk å Vippse!</h2>
+            <p className="text-slate-300 text-sm mb-4">
+              Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
+              Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
+            </p>
+
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
+              <p className="font-bold text-amber-400">Slik gjør du det:</p>
+              <p>1. Åpne Vipps-appen på mobilen din.</p>
+              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
+              <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button 
+                onClick={() => setShowVippsModal(false)}
+                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-xs transition"
+              >
+                Avbryt
+              </button>
+              <button 
+                onClick={confirmPurchase}
+                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg"
+              >
+                Ja, jeg har Vippset!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
