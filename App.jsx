@@ -154,7 +154,6 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
-// DISKRÉ SPILLEMASKIN-KLIKK UNDER TREKNINGEN
 let audioCtx = null;
 const playClickSound = () => {
   try {
@@ -175,21 +174,26 @@ const playClickSound = () => {
   } catch(e) {}
 };
 
-// AVSPILLING AV DIN EGEN INNSPILTE LYDFIL (vinner.mp3)
-const playCustomAudio = (startTime = 0) => {
-  try {
-    const audio = new Audio('./vinner.mp3');
-    audio.currentTime = startTime;
+// Prøver alle mulige navnevarianter automatisk
+const playCustomAudio = () => {
+  const possiblePaths = [
+    './vinner.mp3.m4a',
+    './vinner.m4a',
+    './vinner.mp3',
+    '/vinner.mp3.m4a',
+    '/vinner.m4a',
+    '/vinner.mp3'
+  ];
+  
+  const tryNext = (index) => {
+    if (index >= possiblePaths.length) return;
+    const audio = new Audio(possiblePaths[index]);
     audio.play().catch(() => {
-      // Fallback hvis stien vinner.mp3 ligger i roten
-      const fallbackAudio = new Audio('./public/vinner.mp3');
-      fallbackAudio.currentTime = startTime;
-      fallbackAudio.play().catch(() => {});
+      tryNext(index + 1);
     });
-    return audio;
-  } catch (e) {
-    return null;
-  }
+  };
+
+  tryNext(0);
 };
 
 export default function App() {
@@ -375,12 +379,10 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // 1. Åpne "Og vinneren er..." vinduet og spil av din stemme (fra start til ca. 3.5 sekunder)
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         
-        const audio = playCustomAudio(0); // Spiller innspilt stemme "Og vinneren er..."
+        playCustomAudio();
 
-        // 2. Etter 3.2 sekunder avsløres navnet på skjermen samtidig som klappingen i opptaket ditt inntreffer!
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
 
@@ -662,7 +664,7 @@ export default function App() {
 
       </main>
 
-      {/* REVEAL-MODAL MED AVSPILLING AV DIN EGEN INNSPILTE STEMME M/ KLAPPING */}
+      {/* REVEAL-MODAL MED DIN EGEN LYDFIL */}
       {revealModal.show && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border-4 border-amber-400 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.3)]">
