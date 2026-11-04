@@ -142,13 +142,13 @@ const exactDataFromImage = {
 };
 
 const defaultPrizes = {
-  "Uke 45": { title: "Rødvin - Marques de Chive", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
-  "Uke 46": { title: "Hvitvin - Riesling Trocken", image: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
-  "Uke 47": { title: "Prosecco Spumante", image: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", winner: "" },
-  "Uke 48": { title: "Flott Rødvin", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
-  "Uke 49": { title: "Julevin Spesial", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", winner: "" },
-  "Uke 50": { title: "Eksklusiv Champagne", image: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", winner: "" },
-  "Uke 51": { title: "Stor Julekurv & Vin", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" }
+  "Uke 45": { title: "Rødvin & Hvitvin Duo", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
+  "Uke 46": { title: "Riesling & Pinot Noir", image1: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
+  "Uke 47": { title: "Prosecco & Spumante", image1: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
+  "Uke 48": { title: "Flott Rødvinsett", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", winner: "" },
+  "Uke 49": { title: "Julevin Spesial", image1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", image2: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
+  "Uke 50": { title: "Eksklusiv Champagne & Rødvin", image1: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
+  "Uke 51": { title: "Stor Julekurv & Champagne", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", winner: "" }
 };
 
 const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
@@ -167,7 +167,7 @@ export default function App() {
 
   const [prizes, setPrizes] = useState(() => {
     try {
-      const saved = localStorage.getItem('vinlotteri_prizes_v1');
+      const saved = localStorage.getItem('vinlotteri_prizes_v2');
       return saved ? JSON.parse(saved) : defaultPrizes;
     } catch (e) {
       return defaultPrizes;
@@ -179,8 +179,10 @@ export default function App() {
   const [selectedTickets, setSelectedTickets] = useState({});
   
   const [showVippsModal, setShowVippsModal] = useState(false);
-  const [showPrizesModal, setShowPrizesModal] = useState(false);
+  const [showPrizeModal, setShowPrizeModal] = useState(false);
+  const [showWinnersModal, setShowWinnersModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
   const [adminError, setAdminError] = useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
@@ -194,7 +196,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('vinlotteri_prizes_v1', JSON.stringify(prizes));
+      localStorage.setItem('vinlotteri_prizes_v2', JSON.stringify(prizes));
     } catch (e) {}
   }, [prizes]);
 
@@ -267,7 +269,7 @@ export default function App() {
       setWeeklyData(exactDataFromImage);
       setPrizes(defaultPrizes);
       localStorage.removeItem('vinlotteri_fixed_v4');
-      localStorage.removeItem('vinlotteri_prizes_v1');
+      localStorage.removeItem('vinlotteri_prizes_v2');
       alert("Alt er tilbakestilt!");
     }
   };
@@ -312,6 +314,8 @@ export default function App() {
     }));
   };
 
+  const currentPrize = prizes[activeWeek] || {};
+
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 font-sans pb-12">
       <header className="bg-[#0f172a] border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
@@ -325,14 +329,22 @@ export default function App() {
 
         <div className="flex items-center space-x-3">
           <button 
-            onClick={() => setShowPrizesModal(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition shadow-md flex items-center space-x-1.5"
+            onClick={() => setShowPrizeModal(true)}
+            className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
           >
-            <span>🏆</span>
-            <span>Premier & Vinnere</span>
+            <span>🍷</span>
+            <span>Ukens Premie ({activeWeek})</span>
           </button>
 
-          <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl flex items-center space-x-2 text-xs">
+          <button 
+            onClick={() => setShowWinnersModal(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition shadow-md flex items-center space-x-1.5"
+          >
+            <span>🏆</span>
+            <span>Vinnere</span>
+          </button>
+
+          <div className="bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl flex items-center space-x-2 text-xs">
             <span className="text-amber-400 font-bold">🎟️ {activeWeek}:</span>
             <span className="font-extrabold text-white">{soldCountInActiveWeek} / {MAX_TICKETS}</span>
           </div>
@@ -344,7 +356,7 @@ export default function App() {
             }}
             className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl text-slate-300"
           >
-            {isAdminUnlocked ? "🔓 Admin (Logg ut)" : "⚙️ Admin"}
+            {isAdminUnlocked ? "🔓 Admin" : "⚙️ Admin"}
           </button>
         </div>
       </header>
@@ -463,80 +475,115 @@ export default function App() {
 
       </main>
 
-      {/* PREMIER MODAL */}
-      {showPrizesModal && (
+      {/* UKENS PREMIE MODAL (MED 2 BILDER) */}
+      {showPrizeModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-y-auto shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+          <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-2xl shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div>
-                <h2 className="text-2xl font-black text-amber-400 flex items-center space-x-2">
-                  <span>🏆 Premier & Vinneroversikt</span>
-                </h2>
-                <p className="text-xs text-slate-400">Oversikt over ukentlige premier og vinnere</p>
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">{activeWeek}</span>
+                <h2 className="text-2xl font-black text-white">{currentPrize.title || "Ukens Premie"}</h2>
               </div>
               <button 
-                onClick={() => setShowPrizesModal(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs"
+                onClick={() => setShowPrizeModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs"
               >
                 Lukk ✖
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Bildegalleri med 2 bilder */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="h-56 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
+                {currentPrize.image1 ? (
+                  <img src={currentPrize.image1} alt="Vin bilde 1" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-slate-600 text-sm">Ingen Bilde 1</div>
+                )}
+              </div>
+              <div className="h-56 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center">
+                {currentPrize.image2 ? (
+                  <img src={currentPrize.image2} alt="Vin bilde 2" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-slate-600 text-sm">Ingen Bilde 2</div>
+                )}
+              </div>
+            </div>
+
+            {/* Kun Admin kan redigere bilder og tittel */}
+            {isAdminUnlocked && (
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+                <p className="text-xs font-bold text-amber-400 uppercase">✏️ Admin: Rediger Premier for {activeWeek}</p>
+                <div className="space-y-2">
+                  <input 
+                    type="text" 
+                    placeholder="Premietittel..." 
+                    value={currentPrize.title || ""} 
+                    onChange={(e) => updatePrize(activeWeek, "title", e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Bilde 1 URL (https://...)" 
+                    value={currentPrize.image1 || ""} 
+                    onChange={(e) => updatePrize(activeWeek, "image1", e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Bilde 2 URL (https://...)" 
+                    value={currentPrize.image2 || ""} 
+                    onChange={(e) => updatePrize(activeWeek, "image2", e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* VINNERE MODAL */}
+      {showWinnersModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-xl shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h2 className="text-2xl font-black text-amber-400 flex items-center space-x-2">
+                <span>🏆 Vinneroversikt (Uke 45–51)</span>
+              </h2>
+              <button 
+                onClick={() => setShowWinnersModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs"
+              >
+                Lukk ✖
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
               {weeksList.map(week => {
                 const prize = prizes[week] || {};
                 return (
-                  <div key={week} className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between">
+                  <div key={week} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <div className="relative h-40 bg-slate-900">
-                        {prize.image ? (
-                          <img src={prize.image} alt={prize.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-4xl">🍷</div>
-                        )}
-                        <span className="absolute top-2 left-2 bg-amber-500 text-slate-950 font-black text-xs px-2.5 py-1 rounded-lg">
-                          {week}
-                        </span>
-                      </div>
-
-                      <div className="p-4 space-y-2">
-                        <h3 className="font-bold text-white text-base">{prize.title || "Premie ikke angitt"}</h3>
-                        
-                        <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                          <p className="text-[10px] uppercase font-bold text-slate-500">Vinner:</p>
-                          <p className={`text-xs font-black ${prize.winner ? 'text-emerald-400' : 'text-slate-500 italic'}`}>
-                            {prize.winner ? `🎉 ${prize.winner}` : "Ikke trukket ennå"}
-                          </p>
-                        </div>
-                      </div>
+                      <span className="text-xs font-black text-amber-400 uppercase">{week}</span>
+                      <p className="text-sm font-bold text-white">{prize.title || "Premie"}</p>
                     </div>
 
-                    {isAdminUnlocked && (
-                      <div className="p-4 bg-slate-900 border-t border-slate-800 space-y-2">
-                        <p className="text-[10px] font-bold text-amber-400 uppercase">✏️ Admin Rediger Premie:</p>
+                    <div className="flex-1 sm:text-right">
+                      {isAdminUnlocked ? (
                         <input 
                           type="text" 
-                          placeholder="Premietittel" 
-                          value={prize.title || ""} 
-                          onChange={(e) => updatePrize(week, "title", e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
-                        />
-                        <input 
-                          type="text" 
-                          placeholder="Bilde URL (https://...)" 
-                          value={prize.image || ""} 
-                          onChange={(e) => updatePrize(week, "image", e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
-                        />
-                        <input 
-                          type="text" 
-                          placeholder="Vinner (overstyr)" 
+                          placeholder="Skriv inn vinner..." 
                           value={prize.winner || ""} 
                           onChange={(e) => updatePrize(week, "winner", e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-400 font-bold w-full sm:w-48 text-left sm:text-right"
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <p className={`text-sm font-black ${prize.winner ? 'text-emerald-400' : 'text-slate-600 italic'}`}>
+                          {prize.winner ? `🎉 ${prize.winner}` : "Ikke trukket"}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -550,7 +597,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl">
             <h2 className="text-xl font-bold text-amber-400 mb-1">🔒 Admin Innlogging</h2>
-            <p className="text-slate-400 text-xs mb-4">Oppgi adminkoden for å åpne trekningsfunksjonen.</p>
+            <p className="text-slate-400 text-xs mb-4">Oppgi adminkoden for å redigere vinnere og premier.</p>
             <form onSubmit={handleAdminUnlock} className="space-y-3">
               <input 
                 type="password"
