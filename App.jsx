@@ -290,7 +290,7 @@ export default function App() {
   const handleAddFeedback = (e) => {
     e.preventDefault();
     if (!buyerName.trim()) {
-      alert("Du må skrive inn navnet ditt i feltet øverst på siden før du legger inn en kommentar! Kun ekte navn er tillatt.");
+      alert("Vennligst skriv inn navnet ditt før du legger inn kommentar!");
       return;
     }
     if (!newFeedbackText.trim()) {
@@ -671,7 +671,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* LODD RUTENETT (OPTIMALISERT FOR MOBIL MED 5 KOLONNER) */}
+        {/* LODD RUTENETT */}
         <div className="bg-[#0f172a] p-4 rounded-2xl border border-slate-800 shadow-xl space-y-3">
           <div className="flex justify-between items-center border-b border-slate-800 pb-2">
             <h2 className="text-sm sm:text-base font-bold text-white flex items-center space-x-1">
@@ -724,9 +724,29 @@ export default function App() {
               <button onClick={() => setShowFeedbackModal(false)} className="bg-slate-800 text-slate-300 font-bold px-3 py-1 rounded-xl text-xs">Lukk ✖</button>
             </div>
 
-            <form onSubmit={handleAddFeedback} className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
-              <p className="text-[11px] text-slate-400">Navn: <strong className="text-amber-400">{buyerName ? buyerName : "(Skriv navnet ditt øverst)"}</strong></p>
-              <textarea rows="2" placeholder="Skriv din kommentar..." value={newFeedbackText} onChange={(e) => setNewFeedbackText(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"></textarea>
+            <form onSubmit={handleAddFeedback} className="space-y-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Ditt Navn:</label>
+                <input 
+                  type="text" 
+                  placeholder="Skriv navnet ditt her..." 
+                  value={buyerName}
+                  onChange={(e) => setBuyerName(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Kommentar:</label>
+                <textarea 
+                  rows="2" 
+                  placeholder="Skriv en ros eller litt ris her..." 
+                  value={newFeedbackText} 
+                  onChange={(e) => setNewFeedbackText(e.target.value)} 
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
+                ></textarea>
+              </div>
+
               <button type="submit" className="w-full bg-amber-500 text-slate-950 font-black py-2 rounded-xl text-xs shadow-md">Send kommentar 💬</button>
             </form>
 
