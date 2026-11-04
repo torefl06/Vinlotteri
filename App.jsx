@@ -372,7 +372,6 @@ export default function App() {
         
         customAudio.currentTime = 0;
         customAudio.play().catch(() => {
-          // Fallback-stier hvis GitHub Pages bruker annen rotmappe
           const altAudio = new Audio('./vinner.mp3') || new Audio('vinner.mp3.m4a');
           altAudio.play().catch(() => {});
         });
@@ -884,3 +883,31 @@ export default function App() {
               Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
               Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
             </p>
+
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
+              <p className="font-bold text-amber-400">Slik gjør du det:</p>
+              <p>1. Åpne Vipps-appen på mobilen din.</p>
+              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
+              <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button 
+                onClick={() => setShowVippsModal(false)}
+                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-xs transition"
+              >
+                Avbryt
+              </button>
+              <button 
+                onClick={confirmPurchase}
+                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg"
+              >
+                Ja, jeg har Vippset!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
