@@ -335,7 +335,7 @@ export default function App() {
       return;
     }
 
-    // Tvinger oppstart av din innspilte audio DIREKTE i klikket for å godkjennes av nettleseren
+    // Klargjør lydobjektet på selve brukerklikket
     const customAudio = new Audio('./vinner.mp3.m4a');
     const playPromise = customAudio.play();
     if (playPromise !== undefined) {
@@ -367,16 +367,17 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // 1. Åpne vinnervinduet og spil av din stemme («Og vinneren er...»)
+        // 1. Vis boksen PÅ SEKUNDET hjulene stopper
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         
+        // 2. Start lyden «Og vinneren er...» MED ÉN GANG boksen spretter opp!
         customAudio.currentTime = 0;
         customAudio.play().catch(() => {
           const altAudio = new Audio('./vinner.mp3') || new Audio('vinner.mp3.m4a');
           altAudio.play().catch(() => {});
         });
 
-        // 2. Navnet avsløres i synk med klappingen fra opptaket ditt (3.2 sekunder ut i klippet)
+        // 3. Vent 4,2 sekunder (slik at stemmen din rekker å prate ferdig + over 1 sekunds pause) før navnet avsløres!
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
 
@@ -386,7 +387,7 @@ export default function App() {
             setTempWinner2(winningTicket);
             setShowConfirmDraw(true);
           }
-        }, 3200);
+        }, 4200);
       }
     }, 80);
   };
