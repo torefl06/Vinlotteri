@@ -142,13 +142,13 @@ const exactDataFromImage = {
 };
 
 const defaultPrizes = {
-  "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
-  "Uke 46": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
-  "Uke 47": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
-  "Uke 48": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", winner: "" },
-  "Uke 49": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80", image2: "https://images.unsplash.com/photo-1558001373-a128e08d660e?w=500&q=80", winner: "" },
-  "Uke 50": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", image2: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", winner: "" },
-  "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=500&q=80", image2: "https://images.unsplash.com/photo-1594488507235-d0333b3723ee?w=500&q=80", winner: "" }
+  "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
+  "Uke 46": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
+  "Uke 47": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
+  "Uke 48": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
+  "Uke 49": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
+  "Uke 50": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
+  "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" }
 };
 
 const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "Uke 51"];
@@ -187,7 +187,6 @@ export default function App() {
   const [adminError, setAdminError] = useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
 
-  // Enarmet Banditt-tilstander
   const [isSpinning, setIsSpinning] = useState(false);
   const [slotDisplay, setSlotDisplay] = useState({ tens: "0", ones: "0" });
   const [currentWinner, setCurrentWinner] = useState(null);
@@ -291,12 +290,10 @@ export default function App() {
     }
   };
 
-  // KUN SOLGTE/RESERVERTE LODD TAS MED I TREKNINGEN
   const soldTicketsInActiveWeek = Object.entries(currentWeekData).flatMap(([name, tickets]) => 
     Array.isArray(tickets) ? tickets.map(t => ({ ticketNum: t, owner: name })) : []
   );
 
-  // ENARMET BANDITT - TREKNINGSANIMASJON
   const startSlotMachine = () => {
     if (soldTicketsInActiveWeek.length === 0) {
       alert(`Ingen lodd er solgt eller registrert for ${activeWeek} ennå!`);
@@ -343,12 +340,25 @@ export default function App() {
     }));
   };
 
-  // Funksjon for å håndtere direkte kamera/bildeopplasting fra mobil
+  // Komprimerer kamerabilder automatisk slik at koden og nettsiden laster lynraskt
   const handleImageUpload = (week, imageKey, file) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      updatePrize(week, imageKey, reader.result);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        updatePrize(week, imageKey, compressedBase64);
+      };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   };
@@ -415,7 +425,6 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
 
-        {/* ADMIN KONTROLLPANEL MED ENARMET BANDITT */}
         {isAdminUnlocked && (
           <div className="bg-gradient-to-b from-amber-950/40 to-slate-900/90 border-2 border-amber-500/50 p-6 rounded-2xl shadow-2xl space-y-6">
             <div className="flex justify-between items-center border-b border-amber-500/30 pb-3">
@@ -542,7 +551,7 @@ export default function App() {
 
       </main>
 
-      {/* UKENS PREMIE MODAL (MED KAMERAUPPLASTING FOR 2 FLASKER) */}
+      {/* UKENS PREMIE MODAL */}
       {showPrizeModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-2xl shadow-2xl space-y-6">
@@ -559,7 +568,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Bildevisning for Flaske 1 og Flaske 2 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <p className="text-xs font-bold text-amber-400 text-center uppercase">🍾 Flaske 1</p>
@@ -584,7 +592,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* ADMIN KAMERA OG TITTEL-REDIGERING */}
             {isAdminUnlocked && (
               <div className="p-4 bg-slate-950 border border-amber-500/40 rounded-xl space-y-4">
                 <p className="text-xs font-black text-amber-400 uppercase flex items-center space-x-1">
@@ -604,7 +611,6 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    {/* Bilde 1 / Kamera 1 */}
                     <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-1">
                       <span className="text-[10px] font-bold text-slate-300 block">📷 Ta bilde av Flaske 1:</span>
                       <input 
@@ -616,7 +622,6 @@ export default function App() {
                       />
                     </div>
 
-                    {/* Bilde 2 / Kamera 2 */}
                     <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-1">
                       <span className="text-[10px] font-bold text-slate-300 block">📷 Ta bilde av Flaske 2:</span>
                       <input 
@@ -639,121 +644,4 @@ export default function App() {
       {showWinnersModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-amber-500/30 p-6 rounded-2xl w-full max-w-xl shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h2 className="text-2xl font-black text-amber-400 flex items-center space-x-2">
-                <span>🏆 Vinneroversikt (Uke 45–51)</span>
-              </h2>
-              <button 
-                onClick={() => setShowWinnersModal(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs"
-              >
-                Lukk ✖
-              </button>
-            </div>
-
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-              {weeksList.map(week => {
-                const prize = prizes[week] || {};
-                return (
-                  <div key={week} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <span className="text-xs font-black text-amber-400 uppercase">{week}</span>
-                      <p className="text-sm font-bold text-white">{prize.title || "2 Flasker Vin"}</p>
-                    </div>
-
-                    <div className="flex-1 sm:text-right">
-                      {isAdminUnlocked ? (
-                        <input 
-                          type="text" 
-                          placeholder="Skriv inn vinner..." 
-                          value={prize.winner || ""} 
-                          onChange={(e) => updatePrize(week, "winner", e.target.value)}
-                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-400 font-bold w-full sm:w-48 text-left sm:text-right"
-                        />
-                      ) : (
-                        <p className={`text-sm font-black ${prize.winner ? 'text-emerald-400' : 'text-slate-600 italic'}`}>
-                          {prize.winner ? `🎉 ${prize.winner}` : "Ikke trukket"}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ADMIN MODAL */}
-      {showAdminModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl">
-            <h2 className="text-xl font-bold text-amber-400 mb-1">🔒 Admin Innlogging</h2>
-            <p className="text-slate-400 text-xs mb-4">Oppgi adminkoden for å åpne trekningsfunksjonen.</p>
-            <form onSubmit={handleAdminUnlock} className="space-y-3">
-              <input 
-                type="password"
-                placeholder="Skriv inn adminkode..."
-                value={adminPasswordInput}
-                onChange={(e) => setAdminPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white text-center font-mono focus:outline-none focus:border-amber-500"
-              />
-              {adminError && <p className="text-rose-400 text-xs text-center">{adminError}</p>}
-              <div className="flex space-x-3 pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAdminModal(false)}
-                  className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs"
-                >
-                  Avbryt
-                </button>
-                <button 
-                  type="submit" 
-                  className="w-1/2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-md"
-                >
-                  Lås opp
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* VIPPS MODAL */}
-      {showVippsModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
-            <div className="text-4xl mb-2">📱</div>
-            <h2 className="text-2xl font-black text-amber-400 mb-1">Husk å Vippse!</h2>
-            <p className="text-slate-300 text-sm mb-4">
-              Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
-              Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
-            </p>
-
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
-              <p className="font-bold text-amber-400">Slik gjør du det:</p>
-              <p>1. Åpne Vipps-appen på mobilen din.</p>
-              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
-              <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
-            </div>
-
-            <div className="flex space-x-3">
-              <button 
-                onClick={() => setShowVippsModal(false)}
-                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-xs transition"
-              >
-                Avbryt
-              </button>
-              <button 
-                onClick={confirmPurchase}
-                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg"
-              >
-                Ja, jeg har Vippset!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+            <div
