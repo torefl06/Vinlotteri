@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const exactDataFromImage = {
   "Uke 45": {
@@ -214,6 +214,14 @@ export default function App() {
   const [revealModal, setRevealModal] = useState({ show: false, bottle: 1, name: "", ticket: null, stage: "drumroll" });
   const [showConfirmDraw, setShowConfirmDraw] = useState(false);
 
+  // Laster inn lydobjektet PÅ FORHÅND i minnet så det ikke blir forsinkelse
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio('./vinner.mp3.m4a');
+    audioRef.current.load();
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('vinlotteri_fixed_v4', JSON.stringify(weeklyData));
@@ -335,9 +343,14 @@ export default function App() {
       return;
     }
 
-    // Pre-laster lyden umiddelbart på klikket
-    const customAudio = new Audio('./vinner.mp3.m4a');
-    customAudio.load();
+    // Aktiverer lydmottakeren på brukerklikket
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().then(() => {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }).catch(() => {});
+    }
 
     setIsSpinning(true);
     setShowConfirmDraw(false);
@@ -345,7 +358,7 @@ export default function App() {
     const winningTicket = pool[Math.floor(Math.random() * pool.length)];
     const winNumStr = winningTicket.ticketNum.toString().padStart(2, '0');
 
-    let duration = 2500; 
+    let duration = 2000; // Tett og responsiv snurring
     let elapsed = 0;
 
     const timer = setInterval(() => {
@@ -361,17 +374,19 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // 1. Åpne spenningsboksen MENS tallet stopper
+        // 1. Åpne vinnervinduet NØYAKTIG idet hjulet stopper
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         
-        // 2. Start lydopptaket ("Og vinneren er...") UDEN FORSINKELSE (på 0ms)
-        customAudio.currentTime = 0;
-        customAudio.play().catch(() => {
-          const altAudio = new Audio('./vinner.mp3');
-          altAudio.play().catch(() => {});
-        });
+        // 2. Spill av den forhåndslastede lyden UDEN NOEN FORSINKELSE (0 ms delay)
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(() => {
+            const alt = new Audio('./vinner.mp3');
+            alt.play().catch(() => {});
+          });
+        }
 
-        // 3. Vent nøyaktig 4.5 sekunder (3.2s stemme + 1.3s god kunstpause) før navnet ropes ut på skjermen!
+        // 3. Vent 4,5 sekunder før navneavsløring (gir 3.2s tale + 1.3s perfekt kunstpause)
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
 
