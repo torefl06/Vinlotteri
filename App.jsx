@@ -174,28 +174,6 @@ const playClickSound = () => {
   } catch(e) {}
 };
 
-// Prøver alle mulige navnevarianter automatisk
-const playCustomAudio = () => {
-  const possiblePaths = [
-    './vinner.mp3.m4a',
-    './vinner.m4a',
-    './vinner.mp3',
-    '/vinner.mp3.m4a',
-    '/vinner.m4a',
-    '/vinner.mp3'
-  ];
-  
-  const tryNext = (index) => {
-    if (index >= possiblePaths.length) return;
-    const audio = new Audio(possiblePaths[index]);
-    audio.play().catch(() => {
-      tryNext(index + 1);
-    });
-  };
-
-  tryNext(0);
-};
-
 export default function App() {
   const [weeklyData, setWeeklyData] = useState(() => {
     try {
@@ -357,6 +335,16 @@ export default function App() {
       return;
     }
 
+    // Tvinger oppstart av din innspilte audio DIREKTE i klikket for å godkjennes av nettleseren
+    const customAudio = new Audio('./vinner.mp3.m4a');
+    const playPromise = customAudio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        customAudio.pause();
+        customAudio.currentTime = 0;
+      }).catch(() => {});
+    }
+
     setIsSpinning(true);
     setShowConfirmDraw(false);
 
@@ -379,10 +367,17 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
+        // 1. Åpne vinnervinduet og spil av din stemme («Og vinneren er...»)
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
         
-        playCustomAudio();
+        customAudio.currentTime = 0;
+        customAudio.play().catch(() => {
+          // Fallback-stier hvis GitHub Pages bruker annen rotmappe
+          const altAudio = new Audio('./vinner.mp3') || new Audio('vinner.mp3.m4a');
+          altAudio.play().catch(() => {});
+        });
 
+        // 2. Navnet avsløres i synk med klappingen fra opptaket ditt (3.2 sekunder ut i klippet)
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
 
@@ -889,31 +884,3 @@ export default function App() {
               Du reserverer nå <strong>{totalSelectedCount} lodd</strong> for <strong>{buyerName}</strong>.<br/>
               Totalbeløp: <strong className="text-emerald-400">{totalSelectedCount * TICKET_PRICE} kr</strong>.
             </p>
-
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2 mb-6">
-              <p className="font-bold text-amber-400">Slik gjør du det:</p>
-              <p>1. Åpne Vipps-appen på mobilen din.</p>
-              <p>2. Send <strong>{totalSelectedCount * TICKET_PRICE} kr</strong> til <strong>Tore Farestad Lie (41406582)</strong>.</p>
-              <p>3. Trykk på bekreftelsen under når betalingen er gjennomført.</p>
-            </div>
-
-            <div className="flex space-x-3">
-              <button 
-                onClick={() => setShowVippsModal(false)}
-                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl text-xs transition"
-              >
-                Avbryt
-              </button>
-              <button 
-                onClick={confirmPurchase}
-                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg"
-              >
-                Ja, jeg har Vippset!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
