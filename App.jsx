@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+// Forhåndsutfylte data fra Excel-arket per uke (Uke 45–51)
 const initialWeeklyData = {
   "Uke 45": { "Laila Martine": [1, 2, 3], "Elisabeth T": [4, 5, 6], "Ingrid": [7, 8, 9], "Pål E": [10, 11, 12], "Tore": [13, 14], "Daniel": [15, 16], "Alexander": [17, 18], "Hege": [19, 20], "Karoline": [21, 22], "Gro": [23, 24], "Jannicke": [25, 26], "Ingvild": [27], "Ebbe": [28], "Rene G": [29, 30], "Trine": [31], "Charlotte": [32], "Frode": [33], "Normi": [34], "Kristian": [35] },
   "Uke 46": { "Laila Martine": [1, 2, 3], "Elisabeth T": [4, 5, 6], "Ingrid": [7, 8, 9], "Pål E": [10, 11], "Tore": [12, 13], "Daniel": [14, 15], "Alexander": [16, 17], "Hege": [18, 19], "Karoline": [20, 21], "Gro": [22], "Jannicke": [23, 24], "Ingvild": [25], "Ebbe": [26], "Rene G": [27, 28], "Trine": [29], "Charlotte": [30], "Frode": [31], "Normi": [32] },
@@ -17,7 +18,7 @@ const MAX_TICKETS = 45;
 export default function App() {
   const [weeklyData, setWeeklyData] = useState(() => {
     try {
-      const saved = localStorage.getItem('vinlotteri_data');
+      const saved = localStorage.getItem('vinlotteri_data_v2');
       return saved ? JSON.parse(saved) : initialWeeklyData;
     } catch (e) {
       return initialWeeklyData;
@@ -37,10 +38,11 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('vinlotteri_data', JSON.stringify(weeklyData));
+      localStorage.setItem('vinlotteri_data_v2', JSON.stringify(weeklyData));
     } catch (e) {}
   }, [weeklyData]);
 
+  // Hjelpefunksjon for å finne hvem som eier et lodd
   const getTicketOwner = (week, ticketNum) => {
     const weekObj = weeklyData[week] || {};
     for (const [name, tickets] of Object.entries(weekObj)) {
@@ -49,6 +51,7 @@ export default function App() {
     return null;
   };
 
+  // Håndter trykk på lodd
   const handleTicketClick = (ticketNum) => {
     if (!buyerName.trim()) {
       alert("Skriv inn navnet ditt i feltet øverst før du velger lodd!");
@@ -57,7 +60,7 @@ export default function App() {
 
     const owner = getTicketOwner(activeWeek, ticketNum);
     if (owner) {
-      alert(`Lodd #${ticketNum} er allerede opptatt av ${owner} i ${activeWeek}.`);
+      alert(`Lodd #${ticketNum} er allerede reservert av ${owner} i ${activeWeek}.`);
       return;
     }
 
@@ -106,6 +109,15 @@ export default function App() {
     alert("Takk! Loddene dine er nå reservert.");
   };
 
+  // Nullstill data (hvis du trenger å tilbakestille alt til Excel-starten på nytt)
+  const resetToInitial = () => {
+    if (window.confirm("Vil du tilbakestille loddene til den opprinnelige Excel-listen?")) {
+      setWeeklyData(initialWeeklyData);
+      localStorage.removeItem('vinlotteri_data_v2');
+      alert("Loddene er tilbakestilt!");
+    }
+  };
+
   const handleAdminUnlock = (e) => {
     e.preventDefault();
     if (adminPasswordInput === "vinlotteri26") {
@@ -130,6 +142,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 font-sans pb-12">
+      {/* OPPRINNELIG TOPPBAR */}
       <header className="bg-[#0f172a] border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
         <div className="flex items-center space-x-3">
           <div className="bg-amber-500/20 p-2.5 rounded-xl border border-amber-500/30 text-amber-400 text-2xl">🍷</div>
@@ -157,6 +170,7 @@ export default function App() {
         </div>
       </header>
 
+      {/* UKESKNAPPER */}
       <div className="bg-[#0f172a]/70 border-b border-slate-800 px-6 py-3 flex items-center space-x-2 overflow-x-auto">
         <span className="text-xs font-bold text-amber-400 uppercase tracking-wider mr-2">Velg Uke:</span>
         {weeksList.map(w => (
@@ -172,11 +186,14 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
 
+        {/* ADMIN PANEL DERSOM INNLOGGET */}
         {isAdminUnlocked && (
           <div className="bg-amber-950/30 border-2 border-amber-500/50 p-6 rounded-2xl shadow-2xl space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-black text-amber-400">👑 Admin Kontrollpanel ({activeWeek})</h2>
-              <span className="text-xs text-amber-300 bg-amber-900/50 px-3 py-1 rounded-full border border-amber-500/30">Låst opp med kode</span>
+              <button onClick={resetToInitial} className="text-xs bg-rose-950 hover:bg-rose-900 text-rose-300 px-3 py-1 rounded-lg border border-rose-800">
+                🔄 Tilbakestill til Excel-start
+              </button>
             </div>
             
             <div className="flex flex-wrap gap-4 items-center justify-between bg-slate-950/80 p-4 rounded-xl border border-slate-800">
@@ -197,6 +214,7 @@ export default function App() {
           </div>
         )}
 
+        {/* KJØPER-FELT & OPPSUMMERING */}
         <div className="bg-[#0f172a] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3 w-full md:w-auto">
             <label className="text-xs font-bold text-slate-400 uppercase">Ditt Navn:</label>
@@ -230,6 +248,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* DET OPPRINNELIGE RUTENETTET (1-45) */}
         <div className="bg-[#0f172a] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
           <div className="flex justify-between items-center border-b border-slate-800 pb-3">
             <h2 className="text-lg font-bold text-white flex items-center space-x-2">
@@ -269,6 +288,7 @@ export default function App() {
 
       </main>
 
+      {/* ADMIN MODAL */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl">
@@ -303,6 +323,7 @@ export default function App() {
         </div>
       )}
 
+      {/* VIPPS MODAL */}
       {showVippsModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border border-amber-500/40 p-6 rounded-2xl w-full max-w-md shadow-2xl text-center">
