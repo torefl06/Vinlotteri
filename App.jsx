@@ -154,21 +154,48 @@ const weeksList = ["Uke 45", "Uke 46", "Uke 47", "Uke 48", "Uke 49", "Uke 50", "
 const TICKET_PRICE = 10;
 const MAX_TICKETS = 45;
 
-// FUNKSJON FOR Å SNAKKE MED NORSK STEMME
-const speakText = (text, rate = 1) => {
+// DISKRÉ SPILLEMASKIN-KLIKK
+let audioCtx = null;
+const playClickSound = () => {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(500, now);
+    gain.gain.setValueAtTime(0.03, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.04);
+  } catch(e) {}
+};
+
+// DAMESTEMME-FUNKSJON MED SENSUELT TEMPO OG TONE
+const speakFemaleVoice = (text, pitch = 0.9, rate = 0.85) => {
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel(); // Stopp eventuell pågående tale
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'nb-NO'; // Norsk bokmål
-    utterance.rate = rate; // Hastighet
-    
-    // Velg en norsk stemme hvis tilgjengelig
+    utterance.lang = 'nb-NO';
+    utterance.pitch = pitch; // Litt dypere og mykere tone
+    utterance.rate = rate;   // Roligere tempo for spenning
+
     const voices = window.speechSynthesis.getVoices();
-    const noVoice = voices.find(v => v.lang.includes('nb') || v.lang.includes('no'));
-    if (noVoice) {
-      utterance.voice = noVoice;
-    }
-    
+    // Prioriterer kjente kvinnestemmer (Nora, Hedda, Zira, Google, etc.)
+    const femaleVoice = voices.find(v => 
+      (v.lang.includes('nb') || v.lang.includes('no')) && 
+      (v.name.toLowerCase().includes('nora') || 
+       v.name.toLowerCase().includes('hedda') || 
+       v.name.toLowerCase().includes('female') || 
+       v.name.toLowerCase().includes('zira') ||
+       v.name.toLowerCase().includes('google'))
+    ) || voices.find(v => v.lang.includes('nb') || v.lang.includes('no'));
+
+    if (femaleVoice) utterance.voice = femaleVoice;
     window.speechSynthesis.speak(utterance);
   }
 };
@@ -214,7 +241,6 @@ export default function App() {
   const [showConfirmDraw, setShowConfirmDraw] = useState(false);
 
   useEffect(() => {
-    // Last inn stemmer på nytt om nettleseren bruker litt tid på å hente dem
     if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
@@ -356,6 +382,8 @@ export default function App() {
       const randomTens = Math.floor(Math.random() * 5).toString();
       const randomOnes = Math.floor(Math.random() * 10).toString();
       setSlotDisplay({ tens: randomTens, ones: randomOnes });
+      
+      playClickSound();
 
       elapsed += 80;
       if (elapsed >= duration) {
@@ -363,18 +391,17 @@ export default function App() {
         setSlotDisplay({ tens: winNumStr[0], ones: winNumStr[1] });
         setIsSpinning(false);
 
-        // Vis modalen med "Og vinneren er..."
+        // Vis vinnervinduet
         setRevealModal({ show: true, bottle: flaskeNummer, name: winningTicket.owner, ticket: winningTicket.ticketNum, stage: "drumroll" });
 
-        // Stemmen sier introen
-        speakText(`Og vinneren av flaske ${flaskeNummer} er...`, 0.9);
+        // DAMESTEMMEN SIER "Og vinneren er..." med lav, behagelig og mystisk stemme
+        speakFemaleVoice(`Og vinneren er...`, 0.85, 0.75);
 
-        // Etter 3.5 sekunder ropes vinnerens navn opp
+        // Etter en god og suspensefylt pause på 3.5 sekunder, avsløres og ropes navnet opp!
         setTimeout(() => {
           setRevealModal(prev => ({ ...prev, stage: "winner" }));
           
-          // Stemmen roper vinneren!
-          speakText(`${winningTicket.owner}! Gratulerer!`, 1.0);
+          speakFemaleVoice(`${winningTicket.owner}`, 0.95, 0.9);
 
           if (flaskeNummer === 1) {
             setTempWinner1(winningTicket);
@@ -654,20 +681,20 @@ export default function App() {
 
       </main>
 
-      {/* ROLIG VINNERMODAL M/ OPPLEST STEMME */}
+      {/* REVEAL-MODAL MED ELEGANTE DAMESTEMME OG STILLESTÅENDE NAVN */}
       {revealModal.show && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-[#0f172a] border-4 border-amber-400 p-8 rounded-3xl w-full max-w-lg text-center space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.3)]">
             
-            <div className="text-5xl">🎙️</div>
+            <div className="text-5xl">🍷</div>
             
             {revealModal.stage === "drumroll" ? (
               <div className="space-y-4">
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
                   LODD #{revealModal.ticket} TRUKKET FOR FLASKE {revealModal.bottle}!
                 </span>
-                <h2 className="text-3xl font-black text-white">Og vinneren er...</h2>
-                <p className="text-xs text-slate-400 italic">Hold pusten! Navnet avsløres om et øyeblikk...</p>
+                <h2 className="text-3xl font-black text-white italic">Og vinneren er...</h2>
+                <p className="text-xs text-slate-400 italic">Lytt etter navnet...</p>
               </div>
             ) : (
               <div className="space-y-4">
