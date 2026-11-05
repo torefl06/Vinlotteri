@@ -304,6 +304,7 @@ export default function App() {
   const totalCartCount = Object.values(cart).reduce((sum, nums) => sum + nums.length, 0);
   const totalPrice = totalCartCount * TICKET_PRICE;
 
+  // LÅSER OG LAGRER LODD MED VIPPS-BEKREFTELSE
   const handleLockTickets = async (e) => {
     e.preventDefault();
 
@@ -313,6 +314,13 @@ export default function App() {
     }
     if (totalCartCount === 0) {
       alert("Vennligst velg minst ett ledig grønt lodd.");
+      return;
+    }
+
+    // VIPPS-SJEKK
+    const hasVippsed = window.confirm(`Har du husket å vippse kr ${totalPrice},- til ${VIPPS_RECEIVER_NAME} (${VIPPS_NUMBER})?`);
+    if (!hasVippsed) {
+      alert("Kjøpet ble avbrutt. Vennligst Vipps før du låser loddene.");
       return;
     }
 
@@ -412,7 +420,6 @@ export default function App() {
     alert(`Trekningen for ${week} er nå fullført og lagret! Vinnerne er synlige i Vinnere-fanen.`);
   };
 
-  // NULLSTILLING AV BÅDE MIDLERTIDIG OG LAGRET TREKNING
   const cancelOrUndoDraw = async (week) => {
     if (window.confirm(`Vil du annullere/nullstille trekningen for ${week}?`)) {
       const updatedB1 = { ...bottle1Winners };
