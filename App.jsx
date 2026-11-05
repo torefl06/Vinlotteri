@@ -20,47 +20,44 @@ const db = getFirestore(app);
 
 const TOTAL_TICKETS = 50;
 
-// Den faste navnelisten fra det opprinnelige oppsettet
-const standardTicketMap = {
-  1: "Pål E", 24: "Pål E",
-  2: "Trine", 31: "Trine",
-  3: "Laila Martine", 17: "Laila Martine",
-  4: "Elisabeth T", 29: "Elisabeth T",
-  5: "Charlotte",
-  6: "Hege", 26: "Hege",
-  7: "Frode",
-  8: "Gjermund",
-  9: "Hanne H", 32: "Hanne H",
-  10: "Siv B", 21: "Siv B",
-  11: "Inge K", 25: "Inge K",
-  12: "Line",
-  13: "Tore", 18: "Tore",
-  14: "Ole M", 27: "Ole M",
-  15: "Ingrid", 30: "Ingrid",
-  16: "Anja",
-  19: "Pål R", 35: "Pål R",
-  20: "Siri L", 28: "Siri L",
-  22: "Maiken",
-  23: "Renate",
-  33: "Lars",
-  34: "Kirsti",
-  36: "Sissel",
-  37: "Marianne", 41: "Marianne",
-  38: "Terje", 42: "Terje",
-  39: "Wenche", 43: "Wenche",
-  40: "Anita",
-  44: "Rene G", 45: "Rene G"
-};
-
-// Legger inn standardlisten på alle ukene
-const initialAllTickets = {
-  "Uke 45": { ...standardTicketMap },
-  "Uke 46": { ...standardTicketMap },
-  "Uke 47": { ...standardTicketMap },
-  "Uke 48": { ...standardTicketMap },
-  "Uke 49": { ...standardTicketMap },
-  "Uke 50": { ...standardTicketMap },
-  "Uke 51": { ...standardTicketMap }
+// Eksakt avlest data fra bildet for Uke 46 - Uke 51
+const initialTicketsFromImage = {
+  "Uke 46": {
+    2: "Charlotte", 3: "Laila Martine", 4: "Elisabeth T", 5: "Ingrid", 6: "Hege", 7: "Frode", 8: "Jannicke",
+    10: "Tore", 11: "Daniel", 12: "Trine", 13: "Normi", 14: "Ingrid", 15: "Gro", 16: "Pål E", 17: "Laila Martine",
+    18: "Alexander", 19: "Ingvild", 20: "Tore", 21: "Alexander", 22: "Daniel", 23: "Karoline", 24: "Pål E",
+    25: "Ebbe", 26: "Hege", 29: "Elisabeth T", 30: "Jannicke", 43: "Rene G", 44: "Rene G"
+  },
+  "Uke 47": {
+    2: "Pål E", 3: "Laila Martine", 4: "Elisabeth T", 5: "Frode", 6: "Hege", 7: "Ingrid", 8: "Charlotte", 9: "Gro",
+    10: "Tore", 11: "Daniel", 12: "Trine", 13: "Normi", 14: "Ingrid", 15: "Ingvild", 16: "Jannicke", 17: "Laila Martine",
+    18: "Alexander", 19: "Ingvild", 20: "Tore", 21: "Alexander", 22: "Daniel", 23: "Karoline", 24: "Pål E",
+    25: "Ebbe", 26: "Hege", 29: "Elisabeth T", 30: "Jannicke", 43: "Rene G", 44: "Rene G"
+  },
+  "Uke 48": {
+    2: "Trine", 3: "Laila Martine", 4: "Elisabeth T", 5: "Frode", 6: "Hege", 7: "Karoline", 8: "Jannicke", 9: "Ingrid",
+    10: "Tore", 11: "Daniel", 13: "Normi", 14: "Ingrid", 16: "Pål E", 17: "Laila Martine",
+    18: "Alexander", 19: "Ingvild", 20: "Tore", 21: "Alexander", 22: "Daniel", 24: "Pål E",
+    25: "Ebbe", 26: "Hege", 28: "Charlotte", 29: "Elisabeth T", 30: "Jannicke", 43: "Rene G", 44: "Rene G"
+  },
+  "Uke 49": {
+    1: "Pål E", 2: "Trine", 3: "Laila Martine", 4: "Elisabeth T", 5: "Frode", 6: "Hege", 7: "Karoline", 8: "Ingrid",
+    10: "Tore", 11: "Daniel", 13: "Normi", 14: "Ingrid", 15: "Ingvild", 16: "Jannicke", 17: "Laila Martine",
+    18: "Alexander", 19: "Ingvild", 20: "Tore", 21: "Alexander", 22: "Daniel", 24: "Pål E",
+    25: "Ebbe", 26: "Hege", 28: "Charlotte", 29: "Elisabeth T", 30: "Jannicke", 43: "Rene G", 44: "Rene G"
+  },
+  "Uke 50": {
+    3: "Laila Martine", 4: "Elisabeth T", 5: "Frode", 6: "Hege", 7: "Ingrid", 8: "Jannicke", 9: "Normi",
+    10: "Tore", 11: "Daniel", 12: "Trine", 13: "Karoline", 14: "Ingrid", 15: "Gro", 16: "Pål E", 17: "Laila Martine",
+    18: "Alexander", 19: "Ingvild", 20: "Tore", 21: "Alexander", 22: "Daniel", 24: "Pål E",
+    25: "Ebbe", 26: "Hege", 28: "Charlotte", 29: "Elisabeth T", 30: "Jannicke", 43: "Rene G", 44: "Rene G"
+  },
+  "Uke 51": {
+    3: "Laila Martine", 4: "Elisabeth T", 6: "Hege", 7: "Karoline", 8: "Normi", 9: "Ingrid",
+    10: "Tore", 11: "Daniel", 12: "Karoline", 14: "Ingrid", 15: "Gro", 16: "Pål E", 17: "Laila Martine",
+    18: "Alexander", 19: "Ingvild", 20: "Tore", 21: "Alexander", 22: "Daniel", 24: "Pål E",
+    25: "Ebbe", 26: "Hege", 28: "Charlotte", 29: "Elisabeth T", 30: "Jannicke", 43: "Rene G", 44: "Rene G"
+  }
 };
 
 const defaultPrizes = {
@@ -76,14 +73,14 @@ const defaultPrizes = {
 export default function App() {
   const [activeTab, setActiveTab] = useState('lodd');
   const [prizes, setPrizes] = useState(defaultPrizes);
-  const [tickets, setTickets] = useState(initialAllTickets);
+  const [tickets, setTickets] = useState(initialTicketsFromImage);
   const [tips, setTips] = useState([]);
   const [feedback, setFeedback] = useState([]);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
-  // Aktive uker (ikke trukket ennå) og fullførte uker
+  // Aktive (ikke trukket) og fullførte uker
   const activeWeeks = Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner);
   const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
 
@@ -111,9 +108,8 @@ export default function App() {
       if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
         setTickets(docSnap.data());
       } else {
-        // Skriver inn standard eiernavn på alle uker hvis skydatabasen er tom
-        setTickets(initialAllTickets);
-        setDoc(doc(db, "vinlotteri", "tickets"), initialAllTickets);
+        setTickets(initialTicketsFromImage);
+        setDoc(doc(db, "vinlotteri", "tickets"), initialTicketsFromImage);
       }
     });
     return () => unsub();
@@ -170,7 +166,7 @@ export default function App() {
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
     setSelectedNumbers([]);
-    alert(`Gratulerer ${buyerName}! Du har reservert lodd: ${selectedNumbers.join(', ')}. Husk å Vippse!`);
+    alert(`Gratulerer ${buyerName}! Du har valgt lodd: ${selectedNumbers.map(n => `#${n}`).join(', ')}. Husk å Vippse!`);
   };
 
   const handleDrawWinner = async (week) => {
@@ -218,9 +214,9 @@ export default function App() {
   };
 
   const handleResetAll = async () => {
-    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd på alle uker til standard?")) {
+    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd og premier til skjermbildets standard?")) {
       await setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
-      await setDoc(doc(db, "vinlotteri", "tickets"), initialAllTickets);
+      await setDoc(doc(db, "vinlotteri", "tickets"), initialTicketsFromImage);
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
       await setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
     }
@@ -287,14 +283,14 @@ export default function App() {
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#2a9d8f', borderRadius: '3px', display: 'inline-block' }}></span> Grønn = Ledig
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt nå
+                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt av deg nå
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#e63946', borderRadius: '3px', display: 'inline-block' }}></span> Rød = Opptatt (Navn vises)
                   </span>
                 </div>
 
-                {/* Loddrutenett */}
+                {/* Loddrutenett 1-50 */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
                   {Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1).map(num => {
                     const isTaken = !!currentWeekTickets[num];
@@ -355,7 +351,7 @@ export default function App() {
                   <p style={{ fontSize: '0.8em', color: '#8d99ae', marginTop: '8px' }}>💡 Husk å Vippse etter at du har reservert loddene dine!</p>
                 </form>
 
-                <h3>Oversikt per person ({selectedWeek})</h3>
+                <h3>Kjøpte lodd i {selectedWeek}</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
                   {Object.entries(getSummaryByPerson()).map(([person, lodd]) => (
                     <div key={person} style={{ backgroundColor: '#1c2541', padding: '12px', borderRadius: '6px', borderLeft: '4px solid #4cc9f0' }}>
@@ -446,7 +442,7 @@ export default function App() {
             ) : (
               <div>
                 <p style={{ color: '#4cc9f0' }}>✅ Du er innlogget som admin!</p>
-                <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '20px' }}>🔄 Tilbakestill alt til standard på tvers av alle uker</button>
+                <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '20px' }}>🔄 Tilbakestill alt til bildet sitt oppsett</button>
 
                 <h3>Trekk Vinner</h3>
                 {Object.keys(prizes).map(week => (
