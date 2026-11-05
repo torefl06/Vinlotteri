@@ -391,7 +391,6 @@ export default function App() {
     }, 100);
   };
 
-  // FULLFØRER OG LAGRER TREKNINGEN PERMANENT TIL DATABASEN (SYNLIG FOR ALLE)
   const finalizeDraw = async (week) => {
     const w1 = bottle1Winners[week];
     const w2 = bottle2Winners[week];
@@ -413,11 +412,12 @@ export default function App() {
     alert(`Trekningen for ${week} er nå fullført og lagret! Vinnerne er synlige i Vinnere-fanen.`);
   };
 
+  // DIREKTE ANNULLERING I FIRESTORE
   const undoCompletedWeekDraw = async (week) => {
     if (window.confirm(`Vil du annullere den lagrede trekningen for ${week} slik at du kan trekke på nytt?`)) {
       const updatedPrizes = {
         ...prizes,
-        [week]: { ...prizes[week], winner: "" }
+        [week]: { ...(prizes[week] || {}), winner: "" }
       };
 
       const updatedB1 = { ...bottle1Winners };
@@ -594,8 +594,10 @@ export default function App() {
     await setDoc(doc(db, "vinlotteri", "expenses"), { list: updated });
   };
 
+  // DOBBEL BEKREFTELSE FOR TILBAKESTILLING
   const handleResetAll = async () => {
-    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd og premier til bildet sitt oppsett?")) {
+    const confirmationText = window.prompt("ADVARSEL: Dette vil slette ALLE registrerte lodd, vinnere, tips og utgifter. Skriv 'SLETT' for å bekrefte:");
+    if (confirmationText === "SLETT") {
       await setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
       await setDoc(doc(db, "vinlotteri", "tickets"), initialTicketsFromImage);
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
@@ -603,6 +605,7 @@ export default function App() {
       await setDoc(doc(db, "vinlotteri", "expenses"), { list: [] });
       setBottle1Winners({});
       setBottle2Winners({});
+      alert("Alt er tilbakestilt.");
     }
   };
 
@@ -1032,7 +1035,7 @@ export default function App() {
                   </button>
                 </div>
 
-                <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '25px' }}>🔄 Tilbakestill alt til bildet sitt oppsett</button>
+                <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '25px' }}>⚠️ Tilbakestill alt (Krever passord-bekreftelse)</button>
 
                 {/* SEKSJON: KRONOLOGISK TREKNING */}
                 <h3 style={{ borderBottom: '2px solid #3a506b', paddingBottom: '8px' }}>🎲 Styr trekninger manuelt per flaske</h3>
