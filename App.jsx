@@ -216,7 +216,6 @@ export default function App() {
 
   const [bottle1Winners, setBottle1Winners] = useState({});
   const [bottle2Winners, setBottle2Winners] = useState({});
-  const [pendingWinnerWeek, setPendingWinnerWeek] = useState(null);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingTitle, setDrawingTitle] = useState('');
@@ -305,7 +304,6 @@ export default function App() {
   const totalCartCount = Object.values(cart).reduce((sum, nums) => sum + nums.length, 0);
   const totalPrice = totalCartCount * TICKET_PRICE;
 
-  // LÅSER OG LAGRER LODD UMIDDELBART NÅR FORM SENDES
   const handleLockTickets = async (e) => {
     e.preventDefault();
 
@@ -378,7 +376,7 @@ export default function App() {
         setDrawStep(2);
         playSuspenseChime();
 
-        setTimeout(() => {
+        setTimeout(async () => {
           setDrawStep(3);
           setRevealedWinnerName(winnerName);
           playHarmonicFanfare();
@@ -386,8 +384,17 @@ export default function App() {
           if (bottleNumber === 1) {
             setBottle1Winners({ ...bottle1Winners, [week]: winnerString });
           } else if (bottleNumber === 2) {
-            setBottle2Winners({ ...bottle2Winners, [week]: winnerString });
-            setPendingWinnerWeek(week);
+            const b2String = winnerString;
+            setBottle2Winners({ ...bottle2Winners, [week]: b2String });
+            
+            // LAGRER DEN ENDELIGE VINNER-KOMBINASJONEN TIL FIRESTORE
+            const finalWinnersText = `${bottle1Winners[week]} og ${b2String}`;
+            const updatedPrizes = {
+              ...prizes,
+              [week]: { ...(prizes[week] || {}), winner: finalWinnersText }
+            };
+            setPrizes(updatedPrizes);
+            await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
           }
         }, 2500);
       }
@@ -655,6 +662,48 @@ export default function App() {
 
       <main style={{ maxWidth: '900px', margin: '20px auto', padding: '0 15px' }}>
         
+        {/* ANIMASJONSMODAL FOR TREKNING */}
+        {isDrawing && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
+            <div style={{ backgroundColor: '#1c2541', padding: '30px', borderRadius: '15px', textAlign: 'center', maxWidth: '400px', width: '90%', border: '3px solid #f72585' }}>
+              <h2 style={{ color: '#4cc9f0', margin: '0 0 15px 0' }}>{drawingTitle}</h2>
+              
+              {drawStep === 1 && (
+                <div>
+                  <div style={{ fontSize: '4em', fontWeight: 'bold', color: '#f72585', margin: '20px 0' }}>
+                    #{animatedTicket}
+                  </div>
+                  <p style={{ color: '#8d99ae' }}>Trommehvirvel... 🥁</p>
+                </div>
+              )}
+
+              {drawStep === 2 && (
+                <div>
+                  <div style={{ fontSize: '4em', fontWeight: 'bold', color: '#ffb703', margin: '20px 0' }}>
+                    #{animatedTicket}
+                  </div>
+                  <p style={{ color: '#ffb703', fontWeight: 'bold' }}>Sjekker navnet på loddet...</p>
+                </div>
+              )}
+
+              {drawStep === 3 && (
+                <div>
+                  <div style={{ fontSize: '2em', color: '#4cc9f0', marginBottom: '5px' }}>Lodd #{animatedTicket}</div>
+                  <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#2a9d8f', margin: '15px 0' }}>
+                    🎉 {revealedWinnerName} 🎉
+                  </div>
+                  <button 
+                    onClick={() => setIsDrawing(false)} 
+                    style={{ ...btnStyle, backgroundColor: '#2a9d8f', marginTop: '15px', width: '100%', padding: '12px' }}
+                  >
+                    Neste / Lukk
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* MODAL FOR PREMIER */}
         {showPrizeModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
