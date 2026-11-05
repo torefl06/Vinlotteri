@@ -223,7 +223,6 @@ export default function App() {
   const [animatedTicket, setAnimatedTicket] = useState(null);
   const [drawStep, setDrawStep] = useState(1);
   const [revealedWinnerName, setRevealedWinnerName] = useState('');
-  const [showDrawConfirmModal, setShowDrawConfirmModal] = useState(false);
 
   const allWeeksSorted = sortWeeks(Object.keys(defaultPrizes));
   const activeWeeks = sortWeeks(Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner));
@@ -232,7 +231,6 @@ export default function App() {
   const [selectedWeek, setSelectedWeek] = useState(activeWeeks[0] || 'Uke 46');
   const [cart, setCart] = useState({});
   const [buyerName, setBuyerName] = useState('');
-  const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
 
   const [tipName, setTipName] = useState('');
   const [tipWine, setTipWine] = useState('');
@@ -252,7 +250,7 @@ export default function App() {
     }
   }, [prizes]);
 
-  // --- RENT SANNTIDS-OPPSETT UTEN AUTOMATISK OVERSKRIVING ---
+  // Sanntidslyttere uten automatisk nullstilling
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "prizes"), (docSnap) => {
       if (docSnap.exists()) setPrizes(docSnap.data());
@@ -262,36 +260,28 @@ export default function App() {
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "tickets"), (docSnap) => {
-      if (docSnap.exists()) {
-        setTickets(docSnap.data());
-      }
+      if (docSnap.exists()) setTickets(docSnap.data());
     });
     return () => unsub();
   }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "tips"), (docSnap) => {
-      if (docSnap.exists()) {
-        setTips(docSnap.data().list || []);
-      }
+      if (docSnap.exists()) setTips(docSnap.data().list || []);
     });
     return () => unsub();
   }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "feedback"), (docSnap) => {
-      if (docSnap.exists()) {
-        setFeedback(docSnap.data().list || []);
-      }
+      if (docSnap.exists()) setFeedback(docSnap.data().list || []);
     });
     return () => unsub();
   }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "expenses"), (docSnap) => {
-      if (docSnap.exists()) {
-        setExpenses(docSnap.data().list || []);
-      }
+      if (docSnap.exists()) setExpenses(docSnap.data().list || []);
     });
     return () => unsub();
   }, []);
@@ -315,8 +305,10 @@ export default function App() {
   const totalCartCount = Object.values(cart).reduce((sum, nums) => sum + nums.length, 0);
   const totalPrice = totalCartCount * TICKET_PRICE;
 
-  const handleOpenPaymentPrompt = (e) => {
+  // LÅSER OG LAGRER LODD UMIDDELBART NÅR FORM SENDES
+  const handleLockTickets = async (e) => {
     e.preventDefault();
+
     if (!buyerName.trim()) {
       alert("Vennligst skriv inn navnet ditt.");
       return;
@@ -325,10 +317,7 @@ export default function App() {
       alert("Vennligst velg minst ett ledig grønt lodd.");
       return;
     }
-    setShowPaymentConfirmModal(true);
-  };
 
-  const confirmAndLockTickets = async () => {
     const updatedTickets = { ...tickets };
 
     Object.entries(cart).forEach(([week, nums]) => {
@@ -344,8 +333,7 @@ export default function App() {
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
     
-    setShowPaymentConfirmModal(false);
-    alert(`Gratulerer ${buyerName}! Deres ${totalCartCount} lodd er nå låst. Lykke til i trekningen!`);
+    alert(`Gratulerer ${buyerName}! Deres ${totalCartCount} lodd er nå låst og lagret. Lykke til!`);
     setCart({});
   };
 
@@ -781,7 +769,7 @@ export default function App() {
                   })}
                 </div>
 
-                <form onSubmit={handleOpenPaymentPrompt} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
+                <form onSubmit={handleLockTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
                   <h3>🛒 Din handlekurv</h3>
                   
                   {totalCartCount === 0 ? (
