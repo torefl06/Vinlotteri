@@ -142,7 +142,7 @@ const exactDataFromImage = {
 
 // HER ENDRER DU BILDESTIENE DERSOM DU HAR ANDRE NAVN PÅ BILDENE I PUBLIC-MAPPEN
 const defaultPrizes = {
-  "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: "./vin1.jpg", image2: "./vin2.jpg", winner: "" },
+  "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: "./public/vin1.jpg", image2: "./public/vin2.jpg", winner: "" },
   "Uke 46": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
   "Uke 47": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
   "Uke 48": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
@@ -150,7 +150,6 @@ const defaultPrizes = {
   "Uke 50": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
   "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" }
 };
-
 const initialFeedback = [
   { id: 1, name: "Daniel", text: "Vinlotteriet er det beste lotteriet ever.", date: "Standard" },
   { id: 2, name: "Ingrid", text: "De andre vinner jo alltid.", date: "Standard" }
