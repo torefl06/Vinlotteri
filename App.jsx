@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, onSnapshot, setDoc } from 'firebase/firestore';
 
-// Bildeimport fra src/assets
 import vin1 from './src/assets/vin1.jpg';
 import vin2 from './src/assets/vin2.jpg';
 
-// Firebase Konfigurasjon
 const firebaseConfig = {
   apiKey: "AIzaSyAHAF1PVwgbkIi1GPAgpcjnmN1FllXIap8",
   authDomain: "vinlotteri-b03b8.firebaseapp.com",
@@ -20,8 +18,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+const TOTAL_TICKETS = 50;
+
+// Standard premier (Uke 45 har allerede vinnerne Rene G og Tore)
 const defaultPrizes = {
-  "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: vin1, image2: vin2, winner: "" },
+  "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: vin1, image2: vin2, winner: "Rene G og Tore" },
   "Uke 46": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
   "Uke 47": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
   "Uke 48": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
@@ -32,25 +33,36 @@ const defaultPrizes = {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('lodd');
-  const [selectedWeek, setSelectedWeek] = useState('Uke 45');
   const [prizes, setPrizes] = useState(defaultPrizes);
-  const [tickets, setTickets] = useState({}); // { "Uke 45": { "Lena": [1, 2], "Tore": [3, 4] } }
+  const [tickets, setTickets] = useState({});
   const [tips, setTips] = useState([]);
   const [feedback, setFeedback] = useState([]);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
-  
-  // Skjema-tilstander
+
+  // Finn første aktive (ikke-trukket) uke
+  const activeWeeks = Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner);
+  const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
+
+  const [selectedWeek, setSelectedWeek] = useState(activeWeeks[0] || 'Uke 46');
+  const [selectedNumbers, setSelectedNumbers] = useState([]);
   const [buyerName, setBuyerName] = useState('');
-  const [ticketNumbers, setTicketNumbers] = useState('');
+
   const [tipName, setTipName] = useState('');
   const [tipWine, setTipWine] = useState('');
   const [tipDesc, setTipDesc] = useState('');
   const [fbName, setFbName] = useState('');
   const [fbText, setFbText] = useState('');
 
-  // Live-synkronisering fra Firebase
+  // Dersom den valgte uken plutselig blir trukket, bytt automatisk til neste aktive uke
+  useEffect(() => {
+    if (prizes[selectedWeek]?.winner && activeWeeks.length > 0) {
+      setSelectedWeek(activeWeeks[0]);
+    }
+  }, [prizes]);
+
+  // Firebase synkronisering
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "prizes"), (docSnap) => {
       if (docSnap.exists()) setPrizes(docSnap.data());
@@ -83,52 +95,57 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Registrere kjøp av lodd
-  const handleRegisterTickets = async (e) => {
+  const currentWeekTickets = tickets[selectedWeek] || {};
+
+  const toggleSelectNumber = (num) => {
+    if (currentWeekTickets[num]) return;
+    if (selectedNumbers.includes(num)) {
+      setSelectedNumbers(selectedNumbers.filter(n => n !== num));
+    } else {
+      setSelectedNumbers([...selectedNumbers, num]);
+    }
+  };
+
+  const handleBuyTickets = async (e) => {
     e.preventDefault();
-    if (!buyerName || !ticketNumbers) return;
-
-    // Gjør om f.eks "1, 2, 3" eller "1 2 3" til en liste med tall
-    const parsedNumbers = ticketNumbers
-      .split(/[\s,]+/)
-      .map(n => parseInt(n.trim(), 10))
-      .filter(n => !isNaN(n));
-
-    if (parsedNumbers.length === 0) {
-      alert("Vennligst skriv inn gyldige loddnummer (f.eks. 1, 2, 3)");
+    if (!buyerName.trim()) {
+      alert("Vennligst skriv inn navnet ditt.");
+      return;
+    }
+    if (selectedNumbers.length === 0) {
+      alert("Vennligst velg minst ett ledig grønt lodd.");
       return;
     }
 
-    const currentWeekTickets = tickets[selectedWeek] || {};
-    const existingUserTickets = currentWeekTickets[buyerName] || [];
-    const updatedUserTickets = [...new Set([...existingUserTickets, ...parsedNumbers])];
+    const updatedWeekTickets = { ...currentWeekTickets };
+    selectedNumbers.forEach(num => {
+      updatedWeekTickets[num] = buyerName.trim();
+    });
 
     const updatedTickets = {
       ...tickets,
-      [selectedWeek]: {
-        ...currentWeekTickets,
-        [buyerName]: updatedUserTickets
-      }
+      [selectedWeek]: updatedWeekTickets
     };
 
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
-    setBuyerName('');
-    setTicketNumbers('');
+    setSelectedNumbers([]);
+    alert(`Gratulerer ${buyerName}! Du har valgt lodd: ${selectedNumbers.join(', ')}`);
   };
 
   const handleDrawWinner = async (week) => {
-    const weekTickets = tickets[week];
-    if (!weekTickets || Object.keys(weekTickets).length === 0) {
-      alert("Ingen har registrert lodd for denne uken ennå!");
+    const weekTickets = tickets[week] || {};
+    const takenTicketNumbers = Object.keys(weekTickets);
+    if (takenTicketNumbers.length === 0) {
+      alert("Ingen har valgt lodd for denne uken ennå!");
       return;
     }
-    const participants = Object.keys(weekTickets);
-    const randomWinner = participants[Math.floor(Math.random() * participants.length)];
+    const randomTicket = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+    const winnerName = weekTickets[randomTicket];
     
     const updatedPrizes = {
       ...prizes,
-      [week]: { ...prizes[week], winner: randomWinner }
+      [week]: { ...prizes[week], winner: `${winnerName} (Lodd #${randomTicket})` }
     };
     setPrizes(updatedPrizes);
     await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
@@ -161,7 +178,7 @@ export default function App() {
   };
 
   const handleResetAll = async () => {
-    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd, premier, tips og ris/ros?")) {
+    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd, premier, tips og ris/ros til standard?")) {
       await setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
       await setDoc(doc(db, "vinlotteri", "tickets"), {});
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
@@ -183,63 +200,150 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  const getSummaryByPerson = () => {
+    const summary = {};
+    Object.entries(currentWeekTickets).forEach(([num, person]) => {
+      if (!summary[person]) summary[person] = [];
+      summary[person].push(num);
+    });
+    return summary;
+  };
+
   return (
     <div style={{ backgroundColor: '#0b132b', color: '#ffffff', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      {/* Header */}
       <header style={{ padding: '20px', textAlign: 'center', backgroundColor: '#1c2541', borderBottom: '2px solid #3a506b' }}>
         <h1 style={{ margin: 0, color: '#f72585' }}>🍷 Digitalt Vinlotteri</h1>
         <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <button onClick={() => setActiveTab('lodd')} style={navBtnStyle(activeTab === 'lodd')}>🎟️ Mine Lodd</button>
-          <button onClick={() => setShowPrizeModal(true)} style={navBtnStyle(false)}>🏆 Premier</button>
+          <button onClick={() => setActiveTab('lodd')} style={navBtnStyle(activeTab === 'lodd')}>🎟️ Kjøp Lodd</button>
+          <button onClick={() => setActiveTab('vinnere')} style={navBtnStyle(activeTab === 'vinnere')}>🏆 Vinnere</button>
+          <button onClick={() => setShowPrizeModal(true)} style={navBtnStyle(false)}>🎁 Premier</button>
           <button onClick={() => setActiveTab('tips')} style={navBtnStyle(activeTab === 'tips')}>🍾 Vintips</button>
           <button onClick={() => setActiveTab('feedback')} style={navBtnStyle(activeTab === 'feedback')}>💬 Ris & Ros</button>
           <button onClick={() => setActiveTab('admin')} style={navBtnStyle(activeTab === 'admin')}>⚙️ Admin</button>
         </div>
       </header>
 
-      <main style={{ maxWidth: '800px', margin: '20px auto', padding: '0 15px' }}>
+      <main style={{ maxWidth: '900px', margin: '20px auto', padding: '0 15px' }}>
         
-        {/* FANER */}
+        {/* FANER: Kjøp Lodd */}
         {activeTab === 'lodd' && (
           <div>
-            <h2>🎟️ Registrer og Se Lodd</h2>
-            <div style={{ marginBottom: '15px' }}>
-              <label>Velg Uke: </label>
-              <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} style={inputStyle}>
-                {Object.keys(defaultPrizes).map(w => <option key={w} value={w}>{w}</option>)}
-              </select>
-            </div>
-
-            {prizes[selectedWeek]?.winner && (
-              <div style={{ padding: '15px', backgroundColor: '#4cc9f0', color: '#000', borderRadius: '8px', marginBottom: '20px', textAlign: 'center', fontWeight: 'bold' }}>
-                🎉 Vinner av {selectedWeek}: {prizes[selectedWeek].winner}! 🎉
-              </div>
-            )}
-
-            {/* Skjema for å kjøpe / registrere lodd */}
-            <form onSubmit={handleRegisterTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-              <h3>Registrer dine lodd ({selectedWeek})</h3>
-              <input type="text" placeholder="Ditt Navn *" value={buyerName} onChange={e => setBuyerName(e.target.value)} style={inputStyle} required /><br/><br/>
-              <input type="text" placeholder="Loddnummer (f.eks: 5, 12, 18) *" value={ticketNumbers} onChange={e => setTicketNumbers(e.target.value)} style={inputStyle} required /><br/><br/>
-              <button type="submit" style={btnStyle}>Lagre mine lodd</button>
-            </form>
-
-            <h3>Oversikt over kjente lodd i {selectedWeek}</h3>
-            {(!tickets[selectedWeek] || Object.keys(tickets[selectedWeek]).length === 0) ? (
-              <p style={{ color: '#8d99ae' }}>Ingen har registrert lodd for denne uken ennå. Bli den første!</p>
+            <h2>🎟️ Kjøp Lodd (1–50)</h2>
+            
+            {activeWeeks.length === 0 ? (
+              <p style={{ color: '#4cc9f0' }}>Alle ukene er ferdig trukket!</p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
-                {Object.entries(tickets[selectedWeek]).map(([person, lodd]) => (
-                  <div key={person} style={{ backgroundColor: '#1c2541', padding: '12px', borderRadius: '6px', borderLeft: '4px solid #4cc9f0' }}>
-                    <strong>{person}</strong>
-                    <div style={{ fontSize: '0.9em', color: '#4cc9f0', marginTop: '4px' }}>Lodd: {lodd.join(', ')}</div>
-                  </div>
-                ))}
-              </div>
+              <>
+                <div style={{ marginBottom: '15px' }}>
+                  <label>Velg Aktiv Uke: </label>
+                  <select value={selectedWeek} onChange={(e) => { setSelectedWeek(e.target.value); setSelectedNumbers([]); }} style={inputStyle}>
+                    {activeWeeks.map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                </div>
+
+                {/* Forklaring */}
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', fontSize: '0.9em', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '15px', height: '15px', backgroundColor: '#2a9d8f', borderRadius: '3px', display: 'inline-block' }}></span> Grønn = Ledig
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt av deg
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '15px', height: '15px', backgroundColor: '#e63946', borderRadius: '3px', display: 'inline-block' }}></span> Rød = Opptatt (Navn vises)
+                  </span>
+                </div>
+
+                {/* Loddrutenett */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                  {Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1).map(num => {
+                    const isTaken = !!currentWeekTickets[num];
+                    const isSelected = selectedNumbers.includes(num);
+                    const owner = currentWeekTickets[num];
+
+                    let bg = '#2a9d8f';
+                    if (isTaken) bg = '#e63946';
+                    if (isSelected) bg = '#f72585';
+
+                    return (
+                      <button
+                        key={num}
+                        onClick={() => toggleSelectNumber(num)}
+                        disabled={isTaken}
+                        style={{
+                          backgroundColor: bg,
+                          color: '#fff',
+                          border: isSelected ? '2px solid #fff' : 'none',
+                          borderRadius: '6px',
+                          padding: '8px 4px',
+                          fontWeight: 'bold',
+                          cursor: isTaken ? 'not-allowed' : 'pointer',
+                          fontSize: '0.75em',
+                          minHeight: '55px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          wordBreak: 'break-word',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.1em', marginBottom: '2px' }}>#{num}</span>
+                        <span style={{ fontSize: '0.85em', fontWeight: 'normal', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '100%' }}>
+                          {isTaken ? owner : 'Ledig'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Skjema */}
+                <form onSubmit={handleBuyTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
+                  <h3>Kjøp valgte lodd ({selectedWeek})</h3>
+                  <p>Valgte lodd: <strong>{selectedNumbers.length > 0 ? selectedNumbers.map(n => `#${n}`).join(', ') : 'Trykk på grønne lodd over'}</strong></p>
+                  <input type="text" placeholder="Ditt Navn *" value={buyerName} onChange={e => setBuyerName(e.target.value)} style={inputStyle} required /><br/><br/>
+                  <button type="submit" disabled={selectedNumbers.length === 0} style={{ ...btnStyle, opacity: selectedNumbers.length === 0 ? 0.5 : 1 }}>
+                    Reserver valgte lodd
+                  </button>
+                </form>
+
+                <h3>Kjøpte lodd i {selectedWeek}</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
+                  {Object.entries(getSummaryByPerson()).map(([person, lodd]) => (
+                    <div key={person} style={{ backgroundColor: '#1c2541', padding: '12px', borderRadius: '6px', borderLeft: '4px solid #4cc9f0' }}>
+                      <strong>{person}</strong>
+                      <div style={{ fontSize: '0.9em', color: '#4cc9f0', marginTop: '4px' }}>Lodd ({lodd.length} stk): {lodd.join(', ')}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
 
+        {/* FANER: Vinnere */}
+        {activeTab === 'vinnere' && (
+          <div>
+            <h2>🏆 Oversikt over Vinnere</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {completedWeeks.length === 0 ? (
+                <p style={{ color: '#8d99ae' }}>Ingen trekninger er gjennomført ennå.</p>
+              ) : (
+                completedWeeks.map(week => (
+                  <div key={week} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', borderLeft: '5px solid #f72585', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h3 style={{ margin: '0 0 5px 0', color: '#4cc9f0' }}>{week}</h3>
+                      <p style={{ margin: 0, fontSize: '1.1em' }}>🎉 Vinner: <strong>{prizes[week].winner}</strong></p>
+                    </div>
+                    <span style={{ fontSize: '0.9em', color: '#8d99ae' }}>Ferdig trukket</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* FANER: Vintips */}
         {activeTab === 'tips' && (
           <div>
             <h2>🍾 Vintips fra Kollegaer</h2>
@@ -251,7 +355,7 @@ export default function App() {
               <button type="submit" style={btnStyle}>Legg til Vintips</button>
             </form>
 
-            {tips.length === 0 ? <p style={{ color: '#8d99ae' }}>Ingen vintips lagt inn ennå.</p> : tips.map(t => (
+            {tips.map(t => (
               <div key={t.id} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
                 <h4 style={{ margin: '0 0 5px 0', color: '#f72585' }}>{t.wine}</h4>
                 <p style={{ margin: '0 0 8px 0' }}>{t.desc}</p>
@@ -261,6 +365,7 @@ export default function App() {
           </div>
         )}
 
+        {/* FANER: Ris & Ros */}
         {activeTab === 'feedback' && (
           <div>
             <h2>💬 Ris & Ros</h2>
@@ -271,7 +376,7 @@ export default function App() {
               <button type="submit" style={btnStyle}>Send inn</button>
             </form>
 
-            {feedback.length === 0 ? <p style={{ color: '#8d99ae' }}>Ingen tilbakemeldinger lagt inn ennå.</p> : feedback.map(f => (
+            {feedback.map(f => (
               <div key={f.id} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
                 <p style={{ margin: '0 0 8px 0' }}>"{f.text}"</p>
                 <small style={{ color: '#8d99ae' }}>– {f.name} ({f.date})</small>
@@ -280,6 +385,7 @@ export default function App() {
           </div>
         )}
 
+        {/* FANER: Admin */}
         {activeTab === 'admin' && (
           <div>
             <h2>⚙️ Admin-panel</h2>
@@ -297,8 +403,10 @@ export default function App() {
                 <h3>Trekk Vinner</h3>
                 {Object.keys(prizes).map(week => (
                   <div key={week} style={{ backgroundColor: '#1c2541', padding: '10px 15px', borderRadius: '6px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span><strong>{week}:</strong> {prizes[week].winner ? `Vinner: ${prizes[week].winner}` : 'Ingen vinner trukket'}</span>
-                    <button onClick={() => handleDrawWinner(week)} style={btnStyle}>🎲 Trekk vinner</button>
+                    <span><strong>{week}:</strong> {prizes[week].winner ? `Vinner: ${prizes[week].winner}` : 'Ikke trukket ennå'}</span>
+                    {!prizes[week].winner && (
+                      <button onClick={() => handleDrawWinner(week)} style={btnStyle}>🎲 Trekk vinner</button>
+                    )}
                   </div>
                 ))}
               </div>
