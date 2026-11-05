@@ -1,5 +1,3 @@
-import vin1 from './public/vin1.jpg';
-import vin2 from './public/vin2.jpg';
 import React, { useState, useEffect, useRef } from 'react';
 
 const exactDataFromImage = {
@@ -144,7 +142,12 @@ const exactDataFromImage = {
 
 // HER ENDRER DU BILDESTIENE DERSOM DU HAR ANDRE NAVN PÅ BILDENE I PUBLIC-MAPPEN
 const defaultPrizes = {
-  "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: vin1, image2: vin2, winner: "" },
+  "Uke 45": { 
+    title: "2 Flasker Utvalgt Vin", 
+    image1: new URL('./public/vin1.jpg', import.meta.url).href, 
+    image2: new URL('./public/vin2.jpg', import.meta.url).href, 
+    winner: "" 
+  },
   "Uke 46": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
   "Uke 47": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
   "Uke 48": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
