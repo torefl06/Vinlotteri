@@ -103,7 +103,6 @@ const btnStyle = {
   fontWeight: 'bold'
 };
 
-// Hjelpefunksjon for å sortere uker numerisk (Uke 45, Uke 46 osv.)
 const sortWeeks = (weeksArray) => {
   return [...weeksArray].sort((a, b) => {
     const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
@@ -244,7 +243,6 @@ export default function App() {
   const [fbText, setFbText] = useState('');
   const [replyInput, setReplyInput] = useState({});
 
-  // Regnskapsfelter for utgifter
   const [expenseTitle, setExpenseTitle] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
 
@@ -296,7 +294,6 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // SANNTIDSLYTTER FOR UTGIFTER (REGNSKAP)
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "expenses"), (docSnap) => {
       if (docSnap.exists()) {
@@ -541,10 +538,31 @@ export default function App() {
     await setDoc(doc(db, "vinlotteri", "feedback"), { list: updated });
   };
 
+  // --- ADMIN LOG INN / UT LOGIKK ---
+  const handleAdminTabClick = () => {
+    if (activeTab === 'admin' && isAdmin) {
+      if (window.confirm("Vil du logge ut som admin?")) {
+        setIsAdmin(false);
+        setIsAccountingUnlocked(false);
+        setAdminPassword('');
+        setAccountingPassword('');
+        alert("Du er nå logget ut som admin.");
+      }
+    } else {
+      setActiveTab('admin');
+    }
+  };
+
   const handleAdminLogin = (e) => {
     e.preventDefault();
-    if (adminPassword === 'vinlotteri26') setIsAdmin(true);
-    else alert('Feil passord!');
+    if (adminPassword === 'vinlotteri26') {
+      if (window.confirm("Vil du logge inn som admin?")) {
+        setIsAdmin(true);
+        alert('Logget inn som admin!');
+      }
+    } else {
+      alert('Feil passord!');
+    }
   };
 
   const handleAccountingLogin = (e) => {
@@ -556,7 +574,6 @@ export default function App() {
     }
   };
 
-  // --- REGNSKAPSFUNKSJONER ---
   const handleAddExpense = async (e) => {
     e.preventDefault();
     if (!expenseTitle || !expenseAmount) return;
@@ -630,7 +647,6 @@ export default function App() {
     return summary;
   };
 
-  // Regn ut totalt solgte lodd på tvers av alle uker
   const calculateTotalTicketIncome = () => {
     let totalTicketsCount = 0;
     Object.values(tickets).forEach(weekTickets => {
@@ -653,7 +669,9 @@ export default function App() {
           <button onClick={() => setShowPrizeModal(true)} style={navBtnStyle(showPrizeModal)}>🎁 Premier</button>
           <button onClick={() => setActiveTab('tips')} style={navBtnStyle(activeTab === 'tips')}>🍾 Vintips</button>
           <button onClick={() => setActiveTab('feedback')} style={navBtnStyle(activeTab === 'feedback')}>💬 Ris & Ros</button>
-          <button onClick={() => setActiveTab('admin')} style={navBtnStyle(activeTab === 'admin')}>⚙️ Admin</button>
+          <button onClick={handleAdminTabClick} style={navBtnStyle(activeTab === 'admin')}>
+            {isAdmin ? '🔒 Logg ut Admin' : '⚙️ Admin'}
+          </button>
         </div>
       </header>
 
@@ -957,10 +975,27 @@ export default function App() {
               </form>
             ) : (
               <div>
-                <p style={{ color: '#4cc9f0' }}>✅ Du er innlogget som admin!</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <p style={{ color: '#4cc9f0', margin: 0 }}>✅ Du er innlogget som admin!</p>
+                  <button 
+                    onClick={() => {
+                      if (window.confirm("Vil du logge ut som admin?")) {
+                        setIsAdmin(false);
+                        setIsAccountingUnlocked(false);
+                        setAdminPassword('');
+                        setAccountingPassword('');
+                        alert("Du er nå logget ut.");
+                      }
+                    }} 
+                    style={{ ...btnStyle, backgroundColor: '#e63946', fontSize: '0.85em' }}
+                  >
+                    🔒 Logg ut Admin
+                  </button>
+                </div>
+
                 <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '25px' }}>🔄 Tilbakestill alt til bildet sitt oppsett</button>
 
-                {/* --- SEKSJON: KRONOLOGISK TREKNING (SORTERT UKER) --- */}
+                {/* SEKSJON: KRONOLOGISK TREKNING */}
                 <h3 style={{ borderBottom: '2px solid #3a506b', paddingBottom: '8px' }}>🎲 Styr trekninger manuelt per flaske</h3>
                 {allWeeksSorted.map(week => {
                   const isDone = !!prizes[week]?.winner;
@@ -999,7 +1034,7 @@ export default function App() {
                   );
                 })}
 
-                {/* --- SEKSJON: BESKYTTET REGNSKAP (KREVER PASSORD PÅ NYTT) --- */}
+                {/* SEKSJON: BESKYTTET REGNSKAP */}
                 <div style={{ marginTop: '40px', backgroundColor: '#1c2541', padding: '20px', borderRadius: '12px', border: '2px solid #4cc9f0' }}>
                   <h3 style={{ margin: '0 0 15px 0', color: '#4cc9f0' }}>📊 Vinkassen & Regnskap (Låst)</h3>
 
@@ -1019,7 +1054,6 @@ export default function App() {
                     </form>
                   ) : (
                     <div>
-                      {/* Oversiktskort */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
                         <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #2a9d8f' }}>
                           <small style={{ color: '#8d99ae' }}>Totalt Inn (Kjøpte lodd):</small>
@@ -1037,7 +1071,6 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Legg til utgift */}
                       <h4 style={{ margin: '0 0 10px 0', color: '#4cc9f0' }}>Legg til utgift (Kjøpt vin)</h4>
                       <form onSubmit={handleAddExpense} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
                         <input 
@@ -1059,7 +1092,6 @@ export default function App() {
                         <button type="submit" style={{ ...btnStyle, backgroundColor: '#2a9d8f' }}>+ Registrer</button>
                       </form>
 
-                      {/* Liste over førte utgifter */}
                       <h4 style={{ margin: '0 0 10px 0', color: '#8d99ae' }}>Registrerte Utgifter</h4>
                       {expenses.length === 0 ? (
                         <p style={{ color: '#8d99ae', fontSize: '0.9em' }}>Ingen utgifter er registrert ennå.</p>
@@ -1080,7 +1112,6 @@ export default function App() {
                         </div>
                       )}
 
-                      {/* Spesifisert loddinntekt per uke */}
                       <h4 style={{ margin: '20px 0 10px 0', color: '#8d99ae' }}>Innbetalt per uke</h4>
                       <div style={{ backgroundColor: '#0b132b', padding: '10px', borderRadius: '6px', fontSize: '0.9em' }}>
                         {allWeeksSorted.map(w => {
