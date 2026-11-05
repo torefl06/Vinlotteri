@@ -72,6 +72,44 @@ const defaultPrizes = {
   "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" }
 };
 
+// Funksjoner for syntetiske spennende lydeffekter i nettleseren
+const playDrumroll = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(110, ctx.currentTime);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 2.5);
+  } catch (e) {
+    console.log("Lyd støttes ikke");
+  }
+};
+
+const playFanfare = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [261.63, 329.63, 392.00, 523.25];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.12 + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.12);
+      osc.stop(ctx.currentTime + idx * 0.12 + 0.5);
+    });
+  } catch (e) {
+    console.log("Lyd støttes ikke");
+  }
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('lodd');
   const [prizes, setPrizes] = useState(defaultPrizes);
@@ -82,18 +120,18 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
-  // Animasjonstilstander for trekning
+  // Tilstander for uke-visning og midlertidige vinnere
+  const [bottle1Winners, setBottle1Winners] = useState({}); // { "Uke 46": "Ola (Lodd #12)" }
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingTitle, setDrawingTitle] = useState('');
-  const [animatedNumber, setAnimatedNumber] = useState(null);
-  const [drawingWinnerInfo, setDrawingWinnerInfo] = useState('');
+  const [animatedTicket, setAnimatedTicket] = useState(null);
+  const [animatedName, setAnimatedName] = useState('');
+  const [drawingWinnerResult, setDrawingWinnerResult] = useState('');
 
   const activeWeeks = Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner);
   const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
 
   const [selectedWeek, setSelectedWeek] = useState(activeWeeks[0] || 'Uke 46');
-  
-  // Handlekurv på tvers av uker: { "Uke 46": [2, 5], "Uke 47": [10] }
   const [cart, setCart] = useState({});
   const [buyerName, setBuyerName] = useState('');
 
@@ -161,7 +199,6 @@ export default function App() {
     });
   };
 
-  // Beregn totalt antall lodd på tvers av ALLE valgte uker
   const totalCartCount = Object.values(cart).reduce((sum, nums) => sum + nums.length, 0);
   const totalPrice = totalCartCount * TICKET_PRICE;
 
@@ -195,67 +232,55 @@ export default function App() {
     setCart({});
   };
 
-  const handleDrawTwoWinners = (week) => {
+  // SINGLE TREKNINGSMETODE (Kalles separat for Flaske 1 og Flaske 2)
+  const drawSingleBottle = (week, bottleNumber) => {
     const weekTickets = tickets[week] || {};
     const takenTicketNumbers = Object.keys(weekTickets);
+
     if (takenTicketNumbers.length === 0) {
       alert("Ingen har valgt lodd for denne uken ennå!");
       return;
     }
 
     setIsDrawing(true);
-    setDrawingTitle(`🍾 TREKKER FLASKE 1 (${week})...`);
-    setDrawingWinnerInfo('');
+    setDrawingTitle(`🍾 TREKKER FLASKE ${bottleNumber} (${week})...`);
+    setDrawingWinnerResult('');
+    playDrumroll();
 
-    let counter1 = 0;
-    const interval1 = setInterval(() => {
-      const random1 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
-      setAnimatedNumber(random1);
-      counter1++;
+    let counter = 0;
+    const interval = setInterval(() => {
+      const randomTicket = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+      setAnimatedTicket(randomTicket);
+      setAnimatedName(weekTickets[randomTicket]);
+      counter++;
 
-      if (counter1 > 20) {
-        clearInterval(interval1);
-        const ticket1 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
-        const winner1 = weekTickets[ticket1];
-        setDrawingWinnerInfo(`🍾 FLASKE 1: ${winner1} (Lodd #${ticket1})`);
+      if (counter > 25) {
+        clearInterval(interval);
+        playFanfare();
 
-        setTimeout(() => {
-          setDrawingTitle(`🍾 TREKKER FLASKE 2 (${week})...`);
-          setDrawingWinnerInfo('');
+        const winningTicket = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+        const winnerName = weekTickets[winningTicket];
+        const winnerString = `${winnerName} (Lodd #${winningTicket})`;
 
-          let counter2 = 0;
-          const interval2 = setInterval(() => {
-            const random2 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
-            setAnimatedNumber(random2);
-            counter2++;
+        setAnimatedTicket(winningTicket);
+        setAnimatedName(winnerName);
+        setDrawingWinnerResult(`🎉 FLASKE ${bottleNumber} VINNES AV:\n${winnerString}`);
 
-            if (counter2 > 20) {
-              clearInterval(interval2);
-              let ticket2 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
-              if (takenTicketNumbers.length > 1 && ticket2 === ticket1) {
-                const remaining = takenTicketNumbers.filter(t => t !== ticket1);
-                ticket2 = remaining[Math.floor(Math.random() * remaining.length)];
-              }
-              const winner2 = weekTickets[ticket2];
-
-              const combinedWinners = `${winner1} (Lodd #${ticket1}) & ${winner2} (Lodd #${ticket2})`;
-              setAnimatedNumber(ticket2);
-              setDrawingWinnerInfo(`🎉 BEGGE VINNERE TRUKKET!\n\n🍾 Flaske 1: ${winner1} (#${ticket1})\n🍾 Flaske 2: ${winner2} (#${ticket2})`);
-
-              const updatedPrizes = {
-                ...prizes,
-                [week]: { ...prizes[week], winner: combinedWinners }
-              };
-              setPrizes(updatedPrizes);
-              setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
-
-              setTimeout(() => {
-                setIsDrawing(false);
-              }, 4000);
-            }
-          }, 100);
-
-        }, 2500);
+        if (bottleNumber === 1) {
+          // Lagre Flaske 1 midlertidig
+          setBottle1Winners({ ...bottle1Winners, [week]: winnerString });
+        } else if (bottleNumber === 2) {
+          // Begge flasker er trukket! Lagre endelig vinnerpar til Firebase for å slutte uken
+          const b1Winner = bottle1Winners[week] || "Ukjent";
+          const finalWinnersCombined = `Flaske 1: ${b1Winner} & Flaske 2: ${winnerString}`;
+          
+          const updatedPrizes = {
+            ...prizes,
+            [week]: { ...prizes[week], winner: finalWinnersCombined }
+          };
+          setPrizes(updatedPrizes);
+          setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+        }
       }
     }, 100);
   };
@@ -292,6 +317,7 @@ export default function App() {
       await setDoc(doc(db, "vinlotteri", "tickets"), initialTicketsFromImage);
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
       await setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
+      setBottle1Winners({});
     }
   };
 
@@ -406,12 +432,12 @@ export default function App() {
                   })}
                 </div>
 
-                {/* Skjema med felles handlekurv for alle uker */}
+                {/* Skjema */}
                 <form onSubmit={handleBuyTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
                   <h3>🛒 Din handlekurv (På tvers av uker)</h3>
                   
                   {totalCartCount === 0 ? (
-                    <p style={{ color: '#8d99ae' }}>Ingen lodd er valgt ennå. Klikk på de grønne loddene over for å legge til (du kan bytte uke i menyen).</p>
+                    <p style={{ color: '#8d99ae' }}>Ingen lodd er valgt ennå. Klikk på de grønne loddene over for å legge til.</p>
                   ) : (
                     <div style={{ marginBottom: '15px' }}>
                       {Object.entries(cart).map(([w, nums]) => nums.length > 0 && (
@@ -422,7 +448,6 @@ export default function App() {
                     </div>
                   )}
                   
-                  {/* Boks for Vipps-oppsummering */}
                   <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '6px', margin: '15px 0', borderLeft: '4px solid #ff5b24' }}>
                     <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#4cc9f0' }}>
                       💰 Å betale samlet: {totalPrice} kr <span style={{ fontSize: '0.8em', color: '#8d99ae', fontWeight: 'normal' }}>({totalCartCount} lodd totalt × 10 kr)</span>
@@ -544,15 +569,39 @@ export default function App() {
                 <p style={{ color: '#4cc9f0' }}>✅ Du er innlogget som admin!</p>
                 <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '20px' }}>🔄 Tilbakestill alt til bildet sitt oppsett</button>
 
-                <h3>Trekk 2 Flasker Vin</h3>
-                {Object.keys(prizes).map(week => (
-                  <div key={week} style={{ backgroundColor: '#1c2541', padding: '10px 15px', borderRadius: '6px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span><strong>{week}:</strong> {prizes[week].winner ? `Vinnere: ${prizes[week].winner}` : 'Ikke trukket ennå'}</span>
-                    {!prizes[week].winner && (
-                      <button onClick={() => handleDrawTwoWinners(week)} style={btnStyle}>🎲 Trekk 2 Flasker</button>
-                    )}
-                  </div>
-                ))}
+                <h3>Styr trekninger manuelt per flaske</h3>
+                {Object.keys(prizes).map(week => {
+                  const isDone = !!prizes[week].winner;
+                  const hasWinner1 = !!bottle1Winners[week];
+
+                  return (
+                    <div key={week} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '12px', borderLeft: '4px solid #f72585' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <strong>{week}:</strong> {isDone ? `Vinnere: ${prizes[week].winner}` : (hasWinner1 ? `Flaske 1: ${bottle1Winners[week]}` : 'Ingen flasker trukket ennå')}
+                      </div>
+
+                      {!isDone && (
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          <button 
+                            onClick={() => drawSingleBottle(week, 1)} 
+                            disabled={hasWinner1} 
+                            style={{ ...btnStyle, opacity: hasWinner1 ? 0.4 : 1 }}
+                          >
+                            🎲 Trekk Flaske 1
+                          </button>
+
+                          <button 
+                            onClick={() => drawSingleBottle(week, 2)} 
+                            disabled={!hasWinner1} 
+                            style={{ ...btnStyle, backgroundColor: '#f72585', color: '#fff', opacity: !hasWinner1 ? 0.4 : 1 }}
+                          >
+                            🎲 Trekk Flaske 2 (Fullfør {week})
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -560,16 +609,28 @@ export default function App() {
 
       </main>
 
-      {/* OVERLAY POPUP FOR ANIMERT DOBBELTTREKNING */}
+      {/* OVERLAY POPUP FOR VISUELL TREKNING MED LYD */}
       {isDrawing && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2000, color: '#fff', padding: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.94)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2000, color: '#fff', padding: '20px' }}>
           <h2>{drawingTitle}</h2>
-          <div style={{ fontSize: '5.5em', fontWeight: 'bold', color: '#f72585', margin: '20px 0', minWidth: '150px', textAlign: 'center', backgroundColor: '#1c2541', padding: '20px 40px', borderRadius: '20px', border: '4px solid #4cc9f0' }}>
-            #{animatedNumber}
+          
+          <div style={{ backgroundColor: '#1c2541', padding: '30px 50px', borderRadius: '20px', border: '4px solid #4cc9f0', textAlign: 'center', margin: '20px 0', minWidth: '220px' }}>
+            <div style={{ fontSize: '4.5em', fontWeight: 'bold', color: '#f72585' }}>
+              #{animatedTicket}
+            </div>
+            <div style={{ fontSize: '1.8em', color: '#ffffff', marginTop: '5px' }}>
+              {animatedName}
+            </div>
           </div>
-          {drawingWinnerInfo && (
-            <div style={{ fontSize: '1.4em', color: '#4cc9f0', fontWeight: 'bold', textAlign: 'center', marginTop: '10px', whiteSpace: 'pre-line' }}>
-              {drawingWinnerInfo}
+
+          {drawingWinnerResult && (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5em', color: '#4cc9f0', fontWeight: 'bold', whiteSpace: 'pre-line', marginBottom: '20px' }}>
+                {drawingWinnerResult}
+              </div>
+              <button onClick={() => setIsDrawing(false)} style={{ ...btnStyle, padding: '12px 24px', fontSize: '1.1em' }}>
+                ✖ Lukk og gå videre
+              </button>
             </div>
           )}
         </div>
