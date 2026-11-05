@@ -82,10 +82,9 @@ const playSoftDrumroll = () => {
     const gain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
 
-    osc.type = 'sine'; // Varm sinusbølge
-    osc.frequency.setValueAtTime(90, ctx.currentTime); // Dyp og behagelig bass
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(90, ctx.currentTime);
     
-    // Streng lowpass-filtrering fjerner ALT av spisse frekvenser
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(180, ctx.currentTime);
 
@@ -103,7 +102,6 @@ const playSoftDrumroll = () => {
 const playSuspenseChime = () => {
   try {
     const ctx = getAudioContext();
-    // Varm og dyp C-dur akkord
     const notes = [130.81, 164.81, 196.00]; 
     notes.forEach(freq => {
       const osc = ctx.createOscillator();
@@ -132,7 +130,6 @@ const playSuspenseChime = () => {
 const playHarmonicFanfare = () => {
   try {
     const ctx = getAudioContext();
-    // Myke og rolige C-dur akkorder som toner pent ut
     const chords = [
       { freqs: [261.63, 329.63, 392.00], time: 0, duration: 0.5 },
       { freqs: [329.63, 392.00, 523.25], time: 0.4, duration: 1.8 }
@@ -298,10 +295,19 @@ export default function App() {
 
   const drawSingleBottle = (week, bottleNumber) => {
     const weekTickets = tickets[week] || {};
-    const takenTicketNumbers = Object.keys(weekTickets);
+    let availableTicketNumbers = Object.keys(weekTickets);
 
-    if (takenTicketNumbers.length === 0) {
-      alert("Ingen har valgt lodd for denne uken ennå!");
+    // DERSOM FLASKE 2 TREKKES, FJERN LODDET SOM VANT FLASKE 1!
+    if (bottleNumber === 2 && bottle1Winners[week]) {
+      const match = bottle1Winners[week].match(/Lodd #(\d+)/);
+      if (match && match[1]) {
+        const winningTicket1 = match[1];
+        availableTicketNumbers = availableTicketNumbers.filter(n => n !== winningTicket1);
+      }
+    }
+
+    if (availableTicketNumbers.length === 0) {
+      alert("Det er ingen ledige lodd å trekke fra!");
       return;
     }
 
@@ -313,14 +319,14 @@ export default function App() {
 
     let counter = 0;
     const interval = setInterval(() => {
-      const randomTicket = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+      const randomTicket = availableTicketNumbers[Math.floor(Math.random() * availableTicketNumbers.length)];
       setAnimatedTicket(randomTicket);
       counter++;
 
       if (counter > 25) {
         clearInterval(interval);
         
-        const winningTicket = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+        const winningTicket = availableTicketNumbers[Math.floor(Math.random() * availableTicketNumbers.length)];
         const winnerName = weekTickets[winningTicket];
         const winnerString = `${winnerName} (Lodd #${winningTicket})`;
 
