@@ -376,7 +376,7 @@ export default function App() {
         setDrawStep(2);
         playSuspenseChime();
 
-        setTimeout(async () => {
+        setTimeout(() => {
           setDrawStep(3);
           setRevealedWinnerName(winnerName);
           playHarmonicFanfare();
@@ -384,21 +384,33 @@ export default function App() {
           if (bottleNumber === 1) {
             setBottle1Winners({ ...bottle1Winners, [week]: winnerString });
           } else if (bottleNumber === 2) {
-            const b2String = winnerString;
-            setBottle2Winners({ ...bottle2Winners, [week]: b2String });
-            
-            // LAGRER DEN ENDELIGE VINNER-KOMBINASJONEN TIL FIRESTORE
-            const finalWinnersText = `${bottle1Winners[week]} og ${b2String}`;
-            const updatedPrizes = {
-              ...prizes,
-              [week]: { ...(prizes[week] || {}), winner: finalWinnersText }
-            };
-            setPrizes(updatedPrizes);
-            await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+            setBottle2Winners({ ...bottle2Winners, [week]: winnerString });
           }
         }, 2500);
       }
     }, 100);
+  };
+
+  // FULLFØRER OG LAGRER TREKNINGEN PERMANENT TIL DATABASEN (SYNLIG FOR ALLE)
+  const finalizeDraw = async (week) => {
+    const w1 = bottle1Winners[week];
+    const w2 = bottle2Winners[week];
+
+    if (!w1 || !w2) {
+      alert("Du må trekke både Flaske 1 og Flaske 2 før du fullfører trekningen.");
+      return;
+    }
+
+    const finalWinnersText = `${w1} og ${w2}`;
+    const updatedPrizes = {
+      ...prizes,
+      [week]: { ...(prizes[week] || {}), winner: finalWinnersText }
+    };
+
+    setPrizes(updatedPrizes);
+    await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+
+    alert(`Trekningen for ${week} er nå fullført og lagret! Vinnerne er synlige i Vinnere-fanen.`);
   };
 
   const undoCompletedWeekDraw = async (week) => {
@@ -1032,11 +1044,11 @@ export default function App() {
                   return (
                     <div key={week} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '12px', borderLeft: '4px solid #f72585' }}>
                       <div style={{ marginBottom: '8px' }}>
-                        <strong>{week}:</strong> {isDone ? `Vinnere: ${prizes[week].winner}` : (hasWinner1 ? `Flaske 1: ${bottle1Winners[week]}` : 'Ingen flasker trukket ennå')}
+                        <strong>{week}:</strong> {isDone ? `Vinnere: ${prizes[week].winner}` : (hasWinner1 ? (hasWinner2 ? `Flaske 1: ${bottle1Winners[week]} | Flaske 2: ${bottle2Winners[week]}` : `Flaske 1: ${bottle1Winners[week]}`) : 'Ingen flasker trukket ennå')}
                       </div>
 
                       {!isDone ? (
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                           <button 
                             onClick={() => drawSingleBottle(week, 1)} 
                             disabled={hasWinner1} 
@@ -1051,6 +1063,15 @@ export default function App() {
                           >
                             🎲 Trekk Flaske 2
                           </button>
+
+                          {hasWinner1 && hasWinner2 && (
+                            <button 
+                              onClick={() => finalizeDraw(week)} 
+                              style={{ ...btnStyle, backgroundColor: '#2a9d8f' }}
+                            >
+                              🔒 Fullfør & Lagre Vinnere for {week}
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <button onClick={() => undoCompletedWeekDraw(week)} style={{ ...btnStyle, backgroundColor: '#e63946', fontSize: '0.85em' }}>
