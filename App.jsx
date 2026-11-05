@@ -19,6 +19,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const TOTAL_TICKETS = 50;
+const TICKET_PRICE = 10; // 10 kr per lodd
+const VIPPS_RECEIVER = "Tore Farestad Lie";
 
 // Eksakt avlest data fra bildet for Uke 46 - Uke 51
 const initialTicketsFromImage = {
@@ -80,7 +82,6 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
-  // Aktive (ikke trukket) og fullførte uker
   const activeWeeks = Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner);
   const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
 
@@ -94,7 +95,6 @@ export default function App() {
   const [fbName, setFbName] = useState('');
   const [fbText, setFbText] = useState('');
 
-  // Firebase synkronisering
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "prizes"), (docSnap) => {
       if (docSnap.exists()) setPrizes(docSnap.data());
@@ -142,6 +142,8 @@ export default function App() {
     }
   };
 
+  const totalPrice = selectedNumbers.length * TICKET_PRICE;
+
   const handleBuyTickets = async (e) => {
     e.preventDefault();
     if (!buyerName.trim()) {
@@ -165,8 +167,8 @@ export default function App() {
 
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
+    alert(`Gratulerer ${buyerName}! Du har reservert lodd: ${selectedNumbers.map(n => `#${n}`).join(', ')}.\n\nHusk å Vippse ${totalPrice} kr til ${VIPPS_RECEIVER}!`);
     setSelectedNumbers([]);
-    alert(`Gratulerer ${buyerName}! Du har valgt lodd: ${selectedNumbers.map(n => `#${n}`).join(', ')}. Husk å Vippse!`);
   };
 
   const handleDrawWinner = async (week) => {
@@ -214,7 +216,7 @@ export default function App() {
   };
 
   const handleResetAll = async () => {
-    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd og premier til skjermbildets standard?")) {
+    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd og premier til bildet sitt oppsett?")) {
       await setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
       await setDoc(doc(db, "vinlotteri", "tickets"), initialTicketsFromImage);
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
@@ -283,7 +285,7 @@ export default function App() {
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#2a9d8f', borderRadius: '3px', display: 'inline-block' }}></span> Grønn = Ledig
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt av deg nå
+                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt nå
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#e63946', borderRadius: '3px', display: 'inline-block' }}></span> Rød = Opptatt (Navn vises)
@@ -333,22 +335,32 @@ export default function App() {
                   })}
                 </div>
 
-                {/* Skjema */}
+                {/* Skjema med Vipps-utregning */}
                 <form onSubmit={handleBuyTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
-                  <h3>Kjøp valgte lodd ({selectedWeek})</h3>
-                  <p>Valgte lodd: <strong>{selectedNumbers.length > 0 ? selectedNumbers.map(n => `#${n}`).join(', ') : 'Trykk på grønne lodd over'}</strong></p>
+                  <h3>Reserver valgte lodd ({selectedWeek})</h3>
+                  <p style={{ margin: '5px 0' }}>Valgte lodd: <strong>{selectedNumbers.length > 0 ? selectedNumbers.map(n => `#${n}`).join(', ') : 'Trykk på grønne lodd over'}</strong></p>
+                  
+                  {/* Boks for Vipps-oppsummering */}
+                  <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '6px', margin: '15px 0', borderLeft: '4px solid #ff5b24' }}>
+                    <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#4cc9f0' }}>
+                      💰 Å betale: {totalPrice} kr <span style={{ fontSize: '0.8em', color: '#8d99ae', fontWeight: 'normal' }}>({selectedNumbers.length} stk × 10 kr)</span>
+                    </div>
+                    <div style={{ fontSize: '0.95em', marginTop: '4px' }}>
+                      📱 Vipps til: <strong>{VIPPS_RECEIVER}</strong>
+                    </div>
+                  </div>
+
                   <input type="text" placeholder="Ditt Navn *" value={buyerName} onChange={e => setBuyerName(e.target.value)} style={inputStyle} required /><br/><br/>
                   
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <button type="submit" disabled={selectedNumbers.length === 0} style={{ ...btnStyle, opacity: selectedNumbers.length === 0 ? 0.5 : 1 }}>
-                      Reserver og bekreft lodd
+                      Lagre min reservasjon
                     </button>
                     
                     <a href="https://vipps.no" target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#ff5b24', color: '#fff', padding: '8px 14px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em', display: 'inline-block' }}>
-                      📱 Åpne Vipps for betaling
+                      📱 Åpne Vipps
                     </a>
                   </div>
-                  <p style={{ fontSize: '0.8em', color: '#8d99ae', marginTop: '8px' }}>💡 Husk å Vippse etter at du har reservert loddene dine!</p>
                 </form>
 
                 <h3>Kjøpte lodd i {selectedWeek}</h3>
@@ -357,6 +369,7 @@ export default function App() {
                     <div key={person} style={{ backgroundColor: '#1c2541', padding: '12px', borderRadius: '6px', borderLeft: '4px solid #4cc9f0' }}>
                       <strong>{person}</strong>
                       <div style={{ fontSize: '0.9em', color: '#4cc9f0', marginTop: '4px' }}>Lodd ({lodd.length} stk): {lodd.join(', ')}</div>
+                      <div style={{ fontSize: '0.8em', color: '#8d99ae' }}>Totalt: {lodd.length * TICKET_PRICE} kr</div>
                     </div>
                   ))}
                 </div>
