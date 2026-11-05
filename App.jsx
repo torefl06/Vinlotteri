@@ -19,10 +19,10 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const TOTAL_TICKETS = 50;
-const TICKET_PRICE = 10; // 10 kr per lodd
-const VIPPS_RECEIVER = "Tore Farestad Lie";
+const TICKET_PRICE = 10;
+const VIPPS_RECEIVER_NAME = "Tore Farestad Lie";
+const VIPPS_NUMBER = "41406582";
 
-// Eksakt avlest data fra bildet for Uke 46 - Uke 51
 const initialTicketsFromImage = {
   "Uke 46": {
     2: "Charlotte", 3: "Laila Martine", 4: "Elisabeth T", 5: "Ingrid", 6: "Hege", 7: "Frode", 8: "Jannicke",
@@ -82,6 +82,12 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
+  // Animasjonstilstander for trekning
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawingTitle, setDrawingTitle] = useState('');
+  const [animatedNumber, setAnimatedNumber] = useState(null);
+  const [drawingWinnerInfo, setDrawingWinnerInfo] = useState('');
+
   const activeWeeks = Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner);
   const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
 
@@ -94,6 +100,13 @@ export default function App() {
   const [tipDesc, setTipDesc] = useState('');
   const [fbName, setFbName] = useState('');
   const [fbText, setFbText] = useState('');
+
+  // Sørg for at valgt uke alltid er en aktiv uke dersom forrige blir trukket ferdig
+  useEffect(() => {
+    if (prizes[selectedWeek]?.winner && activeWeeks.length > 0) {
+      setSelectedWeek(activeWeeks[0]);
+    }
+  }, [prizes]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "prizes"), (docSnap) => {
@@ -167,26 +180,78 @@ export default function App() {
 
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
-    alert(`Gratulerer ${buyerName}! Du har reservert lodd: ${selectedNumbers.map(n => `#${n}`).join(', ')}.\n\nHusk å Vippse ${totalPrice} kr til ${VIPPS_RECEIVER}!`);
+    alert(`Gratulerer ${buyerName}! Du har reservert lodd: ${selectedNumbers.map(n => `#${n}`).join(', ')}.\n\nHusk å Vippse ${totalPrice} kr til ${VIPPS_RECEIVER_NAME} (${VIPPS_NUMBER})!`);
     setSelectedNumbers([]);
   };
 
-  const handleDrawWinner = async (week) => {
+  // TREKNING AV 2 FLASKER MED VISUELL ANIMASJON
+  const handleDrawTwoWinners = (week) => {
     const weekTickets = tickets[week] || {};
     const takenTicketNumbers = Object.keys(weekTickets);
     if (takenTicketNumbers.length === 0) {
       alert("Ingen har valgt lodd for denne uken ennå!");
       return;
     }
-    const randomTicket = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
-    const winnerName = weekTickets[randomTicket];
-    
-    const updatedPrizes = {
-      ...prizes,
-      [week]: { ...prizes[week], winner: `${winnerName} (Lodd #${randomTicket})` }
-    };
-    setPrizes(updatedPrizes);
-    await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+
+    // 1. TREKK FLASKE 1
+    setIsDrawing(true);
+    setDrawingTitle(`🍾 TREKKER FLASKE 1 (${week})...`);
+    setDrawingWinnerInfo('');
+
+    let counter1 = 0;
+    const interval1 = setInterval(() => {
+      const random1 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+      setAnimatedNumber(random1);
+      counter1++;
+
+      if (counter1 > 20) {
+        clearInterval(interval1);
+        const ticket1 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+        const winner1 = weekTickets[ticket1];
+        setDrawingWinnerInfo(`🍾 FLASKE 1: ${winner1} (Lodd #${ticket1})`);
+
+        // 2. PAUSE SÅ TREKK FLASKE 2
+        setTimeout(() => {
+          setDrawingTitle(`🍾 TREKKER FLASKE 2 (${week})...`);
+          setDrawingWinnerInfo('');
+
+          let counter2 = 0;
+          const interval2 = setInterval(() => {
+            const random2 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+            setAnimatedNumber(random2);
+            counter2++;
+
+            if (counter2 > 20) {
+              clearInterval(interval2);
+              let ticket2 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
+              // Prøv å finne et annet lodd om mulig
+              if (takenTicketNumbers.length > 1 && ticket2 === ticket1) {
+                const remaining = takenTicketNumbers.filter(t => t !== ticket1);
+                ticket2 = remaining[Math.floor(Math.random() * remaining.length)];
+              }
+              const winner2 = weekTickets[ticket2];
+
+              const combinedWinners = `${winner1} (Lodd #${ticket1}) & ${winner2} (Lodd #${ticket2})`;
+              setAnimatedNumber(ticket2);
+              setDrawingWinnerInfo(`🎉 BEGGE VINNERE TRUKKET!\n\n🍾 Flaske 1: ${winner1} (#${ticket1})\n🍾 Flaske 2: ${winner2} (#${ticket2})`);
+
+              // Lagre vinnerne til Firebase (skjuler uken automatisk)
+              const updatedPrizes = {
+                ...prizes,
+                [week]: { ...prizes[week], winner: combinedWinners }
+              };
+              setPrizes(updatedPrizes);
+              setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+
+              setTimeout(() => {
+                setIsDrawing(false);
+              }, 4000);
+            }
+          }, 100);
+
+        }, 2500);
+      }
+    }, 100);
   };
 
   const handleAddTip = async (e) => {
@@ -269,7 +334,7 @@ export default function App() {
             <h2>🎟️ Loddbord (1–50)</h2>
             
             {activeWeeks.length === 0 ? (
-              <p style={{ color: '#4cc9f0' }}>Alle ukene er ferdig trukket!</p>
+              <p style={{ color: '#4cc9f0', fontSize: '1.2em' }}>🎉 Alle ukene er ferdig trukket!</p>
             ) : (
               <>
                 <div style={{ marginBottom: '15px' }}>
@@ -285,7 +350,7 @@ export default function App() {
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#2a9d8f', borderRadius: '3px', display: 'inline-block' }}></span> Grønn = Ledig
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt nå
+                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt av deg nå
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#e63946', borderRadius: '3px', display: 'inline-block' }}></span> Rød = Opptatt (Navn vises)
@@ -335,7 +400,7 @@ export default function App() {
                   })}
                 </div>
 
-                {/* Skjema med Vipps-utregning */}
+                {/* Skjema med Vipps-deep link */}
                 <form onSubmit={handleBuyTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
                   <h3>Reserver valgte lodd ({selectedWeek})</h3>
                   <p style={{ margin: '5px 0' }}>Valgte lodd: <strong>{selectedNumbers.length > 0 ? selectedNumbers.map(n => `#${n}`).join(', ') : 'Trykk på grønne lodd over'}</strong></p>
@@ -346,7 +411,7 @@ export default function App() {
                       💰 Å betale: {totalPrice} kr <span style={{ fontSize: '0.8em', color: '#8d99ae', fontWeight: 'normal' }}>({selectedNumbers.length} stk × 10 kr)</span>
                     </div>
                     <div style={{ fontSize: '0.95em', marginTop: '4px' }}>
-                      📱 Vipps til: <strong>{VIPPS_RECEIVER}</strong>
+                      📱 Vipps til: <strong>{VIPPS_RECEIVER_NAME} ({VIPPS_NUMBER})</strong>
                     </div>
                   </div>
 
@@ -357,8 +422,13 @@ export default function App() {
                       Lagre min reservasjon
                     </button>
                     
-                    <a href="https://vipps.no" target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#ff5b24', color: '#fff', padding: '8px 14px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em', display: 'inline-block' }}>
-                      📱 Åpne Vipps
+                    <a 
+                      href={`https://qr.vipps.no/28/2/01/0/pay?recipientNumber=${VIPPS_NUMBER}&amount=${totalPrice * 100}&comment=Vinlotteri%20${selectedWeek}`}
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      style={{ backgroundColor: '#ff5b24', color: '#fff', padding: '8px 14px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em', display: 'inline-block' }}
+                    >
+                      📱 Åpne Vipps ({totalPrice} kr)
                     </a>
                   </div>
                 </form>
@@ -390,7 +460,7 @@ export default function App() {
                   <div key={week} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', borderLeft: '5px solid #f72585', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <h3 style={{ margin: '0 0 5px 0', color: '#4cc9f0' }}>{week}</h3>
-                      <p style={{ margin: 0, fontSize: '1.1em' }}>🎉 Vinner: <strong>{prizes[week].winner}</strong></p>
+                      <p style={{ margin: 0, fontSize: '1.1em' }}>🎉 Vinnere: <strong>{prizes[week].winner}</strong></p>
                     </div>
                     <span style={{ fontSize: '0.9em', color: '#8d99ae' }}>Ferdig trukket</span>
                   </div>
@@ -457,12 +527,12 @@ export default function App() {
                 <p style={{ color: '#4cc9f0' }}>✅ Du er innlogget som admin!</p>
                 <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '20px' }}>🔄 Tilbakestill alt til bildet sitt oppsett</button>
 
-                <h3>Trekk Vinner</h3>
+                <h3>Trekk 2 Flasker Vin</h3>
                 {Object.keys(prizes).map(week => (
                   <div key={week} style={{ backgroundColor: '#1c2541', padding: '10px 15px', borderRadius: '6px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span><strong>{week}:</strong> {prizes[week].winner ? `Vinner: ${prizes[week].winner}` : 'Ikke trukket ennå'}</span>
+                    <span><strong>{week}:</strong> {prizes[week].winner ? `Vinnere: ${prizes[week].winner}` : 'Ikke trukket ennå'}</span>
                     {!prizes[week].winner && (
-                      <button onClick={() => handleDrawWinner(week)} style={btnStyle}>🎲 Trekk vinner</button>
+                      <button onClick={() => handleDrawTwoWinners(week)} style={btnStyle}>🎲 Trekk 2 Flasker</button>
                     )}
                   </div>
                 ))}
@@ -472,6 +542,21 @@ export default function App() {
         )}
 
       </main>
+
+      {/* OVERLAY POPUP FOR ANIMERT DOBBELTTREKNING */}
+      {isDrawing && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2000, color: '#fff', padding: '20px' }}>
+          <h2>{drawingTitle}</h2>
+          <div style={{ fontSize: '5.5em', fontWeight: 'bold', color: '#f72585', margin: '20px 0', minWidth: '150px', textAlign: 'center', backgroundColor: '#1c2541', padding: '20px 40px', borderRadius: '20px', border: '4px solid #4cc9f0' }}>
+            #{animatedNumber}
+          </div>
+          {drawingWinnerInfo && (
+            <div style={{ fontSize: '1.4em', color: '#4cc9f0', fontWeight: 'bold', textAlign: 'center', marginTop: '10px', whiteSpace: 'pre-line' }}>
+              {drawingWinnerInfo}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* PREMIE MODAL */}
       {showPrizeModal && (
