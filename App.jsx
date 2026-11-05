@@ -72,7 +72,6 @@ const defaultPrizes = {
   "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" }
 };
 
-// Funksjoner for syntetiske spennende lydeffekter i nettleseren
 const playDrumroll = () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -120,8 +119,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
-  // Tilstander for uke-visning og midlertidige vinnere
-  const [bottle1Winners, setBottle1Winners] = useState({}); // { "Uke 46": "Ola (Lodd #12)" }
+  const [bottle1Winners, setBottle1Winners] = useState({});
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingTitle, setDrawingTitle] = useState('');
   const [animatedTicket, setAnimatedTicket] = useState(null);
@@ -228,11 +226,13 @@ export default function App() {
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
     
-    alert(`Gratulerer ${buyerName}! Du har reservert totalt ${totalCartCount} lodd.\n\nHusk å Vippse ${totalPrice} kr til ${VIPPS_RECEIVER_NAME} (${VIPPS_NUMBER})!`);
+    // Tving åpning av Vipps direkte på mobilen
+    const vippsUrl = `https://qr.vipps.no/28/2/01/0/pay?recipientNumber=${VIPPS_NUMBER}&amount=${totalPrice * 100}&comment=Vinlotteri`;
+    window.location.href = vippsUrl;
+
     setCart({});
   };
 
-  // SINGLE TREKNINGSMETODE (Kalles separat for Flaske 1 og Flaske 2)
   const drawSingleBottle = (week, bottleNumber) => {
     const weekTickets = tickets[week] || {};
     const takenTicketNumbers = Object.keys(weekTickets);
@@ -267,10 +267,8 @@ export default function App() {
         setDrawingWinnerResult(`🎉 FLASKE ${bottleNumber} VINNES AV:\n${winnerString}`);
 
         if (bottleNumber === 1) {
-          // Lagre Flaske 1 midlertidig
           setBottle1Winners({ ...bottle1Winners, [week]: winnerString });
         } else if (bottleNumber === 2) {
-          // Begge flasker er trukket! Lagre endelig vinnerpar til Firebase for å slutte uken
           const b1Winner = bottle1Winners[week] || "Ukjent";
           const finalWinnersCombined = `Flaske 1: ${b1Winner} & Flaske 2: ${winnerString}`;
           
@@ -434,7 +432,7 @@ export default function App() {
 
                 {/* Skjema */}
                 <form onSubmit={handleBuyTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
-                  <h3>🛒 Din handlekurv (På tvers av uker)</h3>
+                  <h3>🛒 Din handlekurv</h3>
                   
                   {totalCartCount === 0 ? (
                     <p style={{ color: '#8d99ae' }}>Ingen lodd er valgt ennå. Klikk på de grønne loddene over for å legge til.</p>
@@ -459,20 +457,9 @@ export default function App() {
 
                   <input type="text" placeholder="Ditt Navn *" value={buyerName} onChange={e => setBuyerName(e.target.value)} style={inputStyle} required /><br/><br/>
                   
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button type="submit" disabled={totalCartCount === 0} style={{ ...btnStyle, opacity: totalCartCount === 0 ? 0.5 : 1 }}>
-                      Lagre alle reservasjoner
-                    </button>
-                    
-                    <a 
-                      href={`https://qr.vipps.no/28/2/01/0/pay?recipientNumber=${VIPPS_NUMBER}&amount=${totalPrice * 100}&comment=Vinlotteri%20Samlet`}
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      style={{ backgroundColor: '#ff5b24', color: '#fff', padding: '8px 14px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em', display: 'inline-block', opacity: totalCartCount === 0 ? 0.5 : 1 }}
-                    >
-                      📱 Åpne Vipps ({totalPrice} kr)
-                    </a>
-                  </div>
+                  <button type="submit" disabled={totalCartCount === 0} style={{ ...btnStyle, backgroundColor: '#ff5b24', color: '#fff', width: '100%', padding: '12px', fontSize: '1.1em', opacity: totalCartCount === 0 ? 0.5 : 1 }}>
+                    📲 Reserver og åpne Vipps ({totalPrice} kr)
+                  </button>
                 </form>
 
                 <h3>Kjøpte lodd i {selectedWeek}</h3>
