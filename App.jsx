@@ -252,21 +252,18 @@ export default function App() {
     }
   }, [prizes]);
 
+  // --- RENT SANNTIDS-OPPSETT UTEN AUTOMATISK OVERSKRIVING ---
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "prizes"), (docSnap) => {
       if (docSnap.exists()) setPrizes(docSnap.data());
-      else setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
     });
     return () => unsub();
   }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "tickets"), (docSnap) => {
-      if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
+      if (docSnap.exists()) {
         setTickets(docSnap.data());
-      } else {
-        setTickets(initialTicketsFromImage);
-        setDoc(doc(db, "vinlotteri", "tickets"), initialTicketsFromImage);
       }
     });
     return () => unsub();
@@ -276,8 +273,6 @@ export default function App() {
     const unsub = onSnapshot(doc(db, "vinlotteri", "tips"), (docSnap) => {
       if (docSnap.exists()) {
         setTips(docSnap.data().list || []);
-      } else {
-        setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
       }
     });
     return () => unsub();
@@ -287,8 +282,6 @@ export default function App() {
     const unsub = onSnapshot(doc(db, "vinlotteri", "feedback"), (docSnap) => {
       if (docSnap.exists()) {
         setFeedback(docSnap.data().list || []);
-      } else {
-        setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
       }
     });
     return () => unsub();
@@ -298,8 +291,6 @@ export default function App() {
     const unsub = onSnapshot(doc(db, "vinlotteri", "expenses"), (docSnap) => {
       if (docSnap.exists()) {
         setExpenses(docSnap.data().list || []);
-      } else {
-        setDoc(doc(db, "vinlotteri", "expenses"), { list: [] });
       }
     });
     return () => unsub();
@@ -538,7 +529,6 @@ export default function App() {
     await setDoc(doc(db, "vinlotteri", "feedback"), { list: updated });
   };
 
-  // --- ADMIN LOG INN / UT LOGIKK ---
   const handleAdminTabClick = () => {
     if (activeTab === 'admin' && isAdmin) {
       if (window.confirm("Vil du logge ut som admin?")) {
@@ -546,7 +536,7 @@ export default function App() {
         setIsAccountingUnlocked(false);
         setAdminPassword('');
         setAccountingPassword('');
-        alert("Du er nå logget ut som admin.");
+        alert("Du er nå logget ut.");
       }
     } else {
       setActiveTab('admin');
