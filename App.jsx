@@ -72,7 +72,6 @@ const defaultPrizes = {
   "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" }
 };
 
-// MYKE OG VARME LYDER (WEB AUDIO API)
 const getAudioContext = () => new (window.AudioContext || window.webkitAudioContext)();
 
 const playSoftDrumroll = () => {
@@ -224,18 +223,26 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  // SANNTIDSLYTTER FOR VINTIPS
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "tips"), (docSnap) => {
-      if (docSnap.exists()) setTips(docSnap.data().list || []);
-      else setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
+      if (docSnap.exists()) {
+        setTips(docSnap.data().list || []);
+      } else {
+        setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
+      }
     });
     return () => unsub();
   }, []);
 
+  // SANNTIDSLYTTER FOR RIS & ROS
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "feedback"), (docSnap) => {
-      if (docSnap.exists()) setFeedback(docSnap.data().list || []);
-      else setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
+      if (docSnap.exists()) {
+        setFeedback(docSnap.data().list || []);
+      } else {
+        setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
+      }
     });
     return () => unsub();
   }, []);
@@ -297,7 +304,6 @@ export default function App() {
     const weekTickets = tickets[week] || {};
     let availableTicketNumbers = Object.keys(weekTickets);
 
-    // DERSOM FLASKE 2 TREKKES, FJERN LODDET SOM VANT FLASKE 1!
     if (bottleNumber === 2 && bottle1Winners[week]) {
       const match = bottle1Winners[week].match(/Lodd #(\d+)/);
       if (match && match[1]) {
@@ -426,7 +432,6 @@ export default function App() {
       date: new Date().toLocaleDateString('no-NO') 
     };
     const updated = [newTip, ...tips];
-    setTips(updated);
     await setDoc(doc(db, "vinlotteri", "tips"), { list: updated });
     setTipName(''); setTipWine(''); setTipPrice(''); setTipDesc('');
   };
@@ -436,7 +441,6 @@ export default function App() {
     if (!fbText) return;
     const newFb = { id: Date.now(), name: fbName || 'Anonym', text: fbText, date: new Date().toLocaleDateString('no-NO') };
     const updated = [newFb, ...feedback];
-    setFeedback(updated);
     await setDoc(doc(db, "vinlotteri", "feedback"), { list: updated });
     setFbName(''); setFbText('');
   };
@@ -638,7 +642,7 @@ export default function App() {
           </div>
         )}
 
-        {/* FANER: Vintips med Pris */}
+        {/* FANER: Vintips */}
         {activeTab === 'tips' && (
           <div>
             <h2>🍾 Vintips fra Kollegaer</h2>
@@ -680,8 +684,8 @@ export default function App() {
             </form>
 
             {feedback.map(f => (
-              <div key={f.id} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
-                <p style={{ margin: '0 0 8px 0' }}>"{f.text}"</p>
+              <div key={f.id} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '10px', borderLeft: '4px solid #4cc9f0' }}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '1.05em' }}>"{f.text}"</p>
                 <small style={{ color: '#8d99ae' }}>– {f.name} ({f.date})</small>
               </div>
             ))}
@@ -762,7 +766,7 @@ export default function App() {
 
       </main>
 
-      {/* POPUP FOR BETALINGSBEKREFTELSE / PÅMINNELSE */}
+      {/* POPUP FOR BETALINGSBEKREFTELSE */}
       {showPaymentConfirmModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', zIndex: 3000 }}>
           <div style={{ backgroundColor: '#1c2541', borderRadius: '12px', padding: '25px', maxWidth: '450px', width: '100%', textAlign: 'center', border: '3px solid #ff5b24' }}>
