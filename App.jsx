@@ -120,11 +120,15 @@ export default function App() {
   const [adminPassword, setAdminPassword] = useState('');
 
   const [bottle1Winners, setBottle1Winners] = useState({});
+  const [bottle2Winners, setBottle2Winners] = useState({});
+  const [pendingWinnerWeek, setPendingWinnerWeek] = useState(null);
+
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingTitle, setDrawingTitle] = useState('');
   const [animatedTicket, setAnimatedTicket] = useState(null);
   const [animatedName, setAnimatedName] = useState('');
   const [drawingWinnerResult, setDrawingWinnerResult] = useState('');
+  const [showDrawConfirmModal, setShowDrawConfirmModal] = useState(false);
 
   const activeWeeks = Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner);
   const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
@@ -213,7 +217,6 @@ export default function App() {
       alert("Vennligst velg minst ett ledig grønt lodd.");
       return;
     }
-    // Åpne bekreftelsespopup
     setShowPaymentConfirmModal(true);
   };
 
@@ -274,18 +277,74 @@ export default function App() {
         if (bottleNumber === 1) {
           setBottle1Winners({ ...bottle1Winners, [week]: winnerString });
         } else if (bottleNumber === 2) {
-          const b1Winner = bottle1Winners[week] || "Ukjent";
-          const finalWinnersCombined = `Flaske 1: ${b1Winner} & Flaske 2: ${winnerString}`;
-          
-          const updatedPrizes = {
-            ...prizes,
-            [week]: { ...prizes[week], winner: finalWinnersCombined }
-          };
-          setPrizes(updatedPrizes);
-          setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+          setBottle2Winners({ ...bottle2Winners, [week]: winnerString });
+          setPendingWinnerWeek(week);
         }
       }
     }, 100);
+  };
+
+  const handleFinishDrawingOverlay = () => {
+    setIsDrawing(false);
+    if (pendingWinnerWeek) {
+      setShowDrawConfirmModal(true);
+    }
+  };
+
+  const lockDrawAndCompleteWeek = async () => {
+    const week = pendingWinnerWeek;
+    if (!week) return;
+
+    const b1 = bottle1Winners[week] || "Ukjent";
+    const b2 = bottle2Winners[week] || "Ukjent";
+    const finalWinnersCombined = `Flaske 1: ${b1} & Flaske 2: ${b2}`;
+
+    const updatedPrizes = {
+      ...prizes,
+      [week]: { ...prizes[week], winner: finalWinnersCombined }
+    };
+
+    setPrizes(updatedPrizes);
+    await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+
+    setShowDrawConfirmModal(false);
+    setPendingWinnerWeek(null);
+    alert(`${week} er nå ferdig og låst som trukket!`);
+  };
+
+  const cancelDrawAndResetWeek = (week) => {
+    const updatedB1 = { ...bottle1Winners };
+    const updatedB2 = { ...bottle2Winners };
+    delete updatedB1[week];
+    delete updatedB2[week];
+
+    setBottle1Winners(updatedB1);
+    setBottle2Winners(updatedB2);
+    setShowDrawConfirmModal(false);
+    setPendingWinnerWeek(null);
+    alert(`Trekningen for ${week} ble annullert. Du kan trekke på nytt!`);
+  };
+
+  const undoCompletedWeekDraw = async (week) => {
+    if (window.confirm(`Vil du annullere den lagrede trekningen for ${week} slik at du kan trekke på nytt?`)) {
+      const updatedPrizes = {
+        ...prizes,
+        [week]: { ...prizes[week], winner: "" }
+      };
+
+      const updatedB1 = { ...bottle1Winners };
+      const updatedB2 = { ...bottle2Winners };
+      delete updatedB1[week];
+      delete updatedB2[week];
+
+      setBottle1Winners(updatedB1);
+      setBottle2Winners(updatedB2);
+      setPrizes(updatedPrizes);
+      await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+
+      setSelectedWeek(week);
+      alert(`Trekningen for ${week} er annullert! Uken er åpnet i Admin for ny trekning.`);
+    }
   };
 
   const handleAddTip = async (e) => {
@@ -328,6 +387,7 @@ export default function App() {
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
       await setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
       setBottle1Winners({});
+      setBottle2Winners({});
     }
   };
 
@@ -580,6 +640,7 @@ export default function App() {
                 {Object.keys(prizes).map(week => {
                   const isDone = !!prizes[week].winner;
                   const hasWinner1 = !!bottle1Winners[week];
+                  const hasWinner2 = !!bottle2Winners[week];
 
                   return (
                     <div key={week} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '12px', borderLeft: '4px solid #f72585' }}>
@@ -587,7 +648,7 @@ export default function App() {
                         <strong>{week}:</strong> {isDone ? `Vinnere: ${prizes[week].winner}` : (hasWinner1 ? `Flaske 1: ${bottle1Winners[week]}` : 'Ingen flasker trukket ennå')}
                       </div>
 
-                      {!isDone && (
+                      {!isDone ? (
                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                           <button 
                             onClick={() => drawSingleBottle(week, 1)} 
@@ -599,10 +660,28 @@ export default function App() {
 
                           <button 
                             onClick={() => drawSingleBottle(week, 2)} 
-                            disabled={!hasWinner1} 
-                            style={{ ...btnStyle, backgroundColor: '#f72585', color: '#fff', opacity: !hasWinner1 ? 0.4 : 1 }}
+                            disabled={!hasWinner1 || hasWinner2} 
+                            style={{ ...btnStyle, backgroundColor: '#f72585', color: '#fff', opacity: (!hasWinner1 || hasWinner2) ? 0.4 : 1 }}
                           >
-                            🎲 Trekk Flaske 2 (Fullfør {week})
+                            🎲 Trekk Flaske 2
+                          </button>
+
+                          {(hasWinner1 || hasWinner2) && (
+                            <button 
+                              onClick={() => cancelDrawAndResetWeek(week)}
+                              style={{ ...btnStyle, backgroundColor: '#d90429', color: '#fff' }}
+                            >
+                              🔄 Annuller påbegynt trekning
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <button 
+                            onClick={() => undoCompletedWeekDraw(week)}
+                            style={{ ...btnStyle, backgroundColor: '#d90429', color: '#fff', marginTop: '5px' }}
+                          >
+                            ↩️ Annuller fullført trekning for {week}
                           </button>
                         </div>
                       )}
@@ -652,6 +731,43 @@ export default function App() {
         </div>
       )}
 
+      {/* POPUP FOR BEKREFTELSE AV FULLFØRT TREKNING */}
+      {showDrawConfirmModal && pendingWinnerWeek && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', zIndex: 3500 }}>
+          <div style={{ backgroundColor: '#1c2541', borderRadius: '12px', padding: '25px', maxWidth: '500px', width: '100%', textAlign: 'center', border: '3px solid #f72585' }}>
+            <h2 style={{ color: '#f72585', margin: '0 0 10px 0' }}>🎲 Er trekningen foretatt?</h2>
+            <p style={{ fontSize: '1.05em' }}>
+              Begge flasker for <strong>{pendingWinnerWeek}</strong> er trukket:
+            </p>
+            
+            <div style={{ backgroundColor: '#0b132b', padding: '15px', borderRadius: '8px', margin: '15px 0', textAlign: 'left', fontSize: '0.95em' }}>
+              <div style={{ color: '#4cc9f0', marginBottom: '6px' }}>🍾 <strong>Flaske 1:</strong> {bottle1Winners[pendingWinnerWeek]}</div>
+              <div style={{ color: '#f72585' }}>🍾 <strong>Flaske 2:</strong> {bottle2Winners[pendingWinnerWeek]}</div>
+            </div>
+
+            <p style={{ fontSize: '0.9em', color: '#aaa' }}>
+              Trykker du «Ja, lås trekningen» blir uken markert som fullført og lagt til vinneroversikten.
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button 
+                onClick={() => cancelDrawAndResetWeek(pendingWinnerWeek)} 
+                style={{ ...btnStyle, backgroundColor: '#d90429', color: '#fff', flex: 1, padding: '10px' }}
+              >
+                🔄 Nei, annuller / prøv på nytt
+              </button>
+              
+              <button 
+                onClick={lockDrawAndCompleteWeek} 
+                style={{ ...btnStyle, backgroundColor: '#2a9d8f', color: '#fff', flex: 1, padding: '10px', fontSize: '1.05em' }}
+              >
+                ✅ Ja, lås trekningen!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* OVERLAY POPUP FOR VISUELL TREKNING MED LYD */}
       {isDrawing && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.94)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2000, color: '#fff', padding: '20px' }}>
@@ -671,8 +787,8 @@ export default function App() {
               <div style={{ fontSize: '1.5em', color: '#4cc9f0', fontWeight: 'bold', whiteSpace: 'pre-line', marginBottom: '20px' }}>
                 {drawingWinnerResult}
               </div>
-              <button onClick={() => setIsDrawing(false)} style={{ ...btnStyle, padding: '12px 24px', fontSize: '1.1em' }}>
-                ✖ Lukk og gå videre
+              <button onClick={handleFinishDrawingOverlay} style={{ ...btnStyle, padding: '12px 24px', fontSize: '1.1em' }}>
+                ✖ Lukk og gå til bekreftelse
               </button>
             </div>
           )}
