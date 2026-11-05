@@ -412,26 +412,27 @@ export default function App() {
     alert(`Trekningen for ${week} er nå fullført og lagret! Vinnerne er synlige i Vinnere-fanen.`);
   };
 
-  // DIREKTE ANNULLERING I FIRESTORE
-  const undoCompletedWeekDraw = async (week) => {
-    if (window.confirm(`Vil du annullere den lagrede trekningen for ${week} slik at du kan trekke på nytt?`)) {
-      const updatedPrizes = {
-        ...prizes,
-        [week]: { ...(prizes[week] || {}), winner: "" }
-      };
-
+  // NULLSTILLING AV BÅDE MIDLERTIDIG OG LAGRET TREKNING
+  const cancelOrUndoDraw = async (week) => {
+    if (window.confirm(`Vil du annullere/nullstille trekningen for ${week}?`)) {
       const updatedB1 = { ...bottle1Winners };
       const updatedB2 = { ...bottle2Winners };
       delete updatedB1[week];
       delete updatedB2[week];
-
       setBottle1Winners(updatedB1);
       setBottle2Winners(updatedB2);
-      setPrizes(updatedPrizes);
-      await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+
+      if (prizes[week]?.winner) {
+        const updatedPrizes = {
+          ...prizes,
+          [week]: { ...prizes[week], winner: "" }
+        };
+        setPrizes(updatedPrizes);
+        await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
+      }
 
       setSelectedWeek(week);
-      alert(`Trekningen for ${week} er annullert! Uken er åpnet i Admin for ny trekning.`);
+      alert(`Trekningen for ${week} er annullert og uken er klar for ny trekning.`);
     }
   };
 
@@ -594,7 +595,6 @@ export default function App() {
     await setDoc(doc(db, "vinlotteri", "expenses"), { list: updated });
   };
 
-  // DOBBEL BEKREFTELSE FOR TILBAKESTILLING
   const handleResetAll = async () => {
     const confirmationText = window.prompt("ADVARSEL: Dette vil slette ALLE registrerte lodd, vinnere, tips og utgifter. Skriv 'SLETT' for å bekrefte:");
     if (confirmationText === "SLETT") {
@@ -1050,37 +1050,44 @@ export default function App() {
                         <strong>{week}:</strong> {isDone ? `Vinnere: ${prizes[week].winner}` : (hasWinner1 ? (hasWinner2 ? `Flaske 1: ${bottle1Winners[week]} | Flaske 2: ${bottle2Winners[week]}` : `Flaske 1: ${bottle1Winners[week]}`) : 'Ingen flasker trukket ennå')}
                       </div>
 
-                      {!isDone ? (
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                          <button 
-                            onClick={() => drawSingleBottle(week, 1)} 
-                            disabled={hasWinner1} 
-                            style={{ ...btnStyle, opacity: hasWinner1 ? 0.4 : 1 }}
-                          >
-                            🎲 Trekk Flaske 1
-                          </button>
-                          <button 
-                            onClick={() => drawSingleBottle(week, 2)} 
-                            disabled={!hasWinner1 || hasWinner2} 
-                            style={{ ...btnStyle, opacity: (!hasWinner1 || hasWinner2) ? 0.4 : 1 }}
-                          >
-                            🎲 Trekk Flaske 2
-                          </button>
-
-                          {hasWinner1 && hasWinner2 && (
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {!isDone && (
+                          <>
                             <button 
-                              onClick={() => finalizeDraw(week)} 
-                              style={{ ...btnStyle, backgroundColor: '#2a9d8f' }}
+                              onClick={() => drawSingleBottle(week, 1)} 
+                              disabled={hasWinner1} 
+                              style={{ ...btnStyle, opacity: hasWinner1 ? 0.4 : 1 }}
                             >
-                              🔒 Fullfør & Lagre Vinnere for {week}
+                              🎲 Trekk Flaske 1
                             </button>
-                          )}
-                        </div>
-                      ) : (
-                        <button onClick={() => undoCompletedWeekDraw(week)} style={{ ...btnStyle, backgroundColor: '#e63946', fontSize: '0.85em' }}>
-                          ↩️ Annuller trekning
-                        </button>
-                      )}
+                            <button 
+                              onClick={() => drawSingleBottle(week, 2)} 
+                              disabled={!hasWinner1 || hasWinner2} 
+                              style={{ ...btnStyle, opacity: (!hasWinner1 || hasWinner2) ? 0.4 : 1 }}
+                            >
+                              🎲 Trekk Flaske 2
+                            </button>
+
+                            {hasWinner1 && hasWinner2 && (
+                              <button 
+                                onClick={() => finalizeDraw(week)} 
+                                style={{ ...btnStyle, backgroundColor: '#2a9d8f' }}
+                              >
+                                🔒 Fullfør & Lagre Vinnere
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {(hasWinner1 || isDone) && (
+                          <button 
+                            onClick={() => cancelOrUndoDraw(week)} 
+                            style={{ ...btnStyle, backgroundColor: '#e63946', fontSize: '0.85em' }}
+                          >
+                            ↩️ Annuller trekning
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
