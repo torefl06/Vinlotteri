@@ -20,7 +20,49 @@ const db = getFirestore(app);
 
 const TOTAL_TICKETS = 50;
 
-// Standard uker og premier (Uke 45 er ferdig med Rene G og Tore)
+// Den faste navnelisten fra det opprinnelige oppsettet
+const standardTicketMap = {
+  1: "Pål E", 24: "Pål E",
+  2: "Trine", 31: "Trine",
+  3: "Laila Martine", 17: "Laila Martine",
+  4: "Elisabeth T", 29: "Elisabeth T",
+  5: "Charlotte",
+  6: "Hege", 26: "Hege",
+  7: "Frode",
+  8: "Gjermund",
+  9: "Hanne H", 32: "Hanne H",
+  10: "Siv B", 21: "Siv B",
+  11: "Inge K", 25: "Inge K",
+  12: "Line",
+  13: "Tore", 18: "Tore",
+  14: "Ole M", 27: "Ole M",
+  15: "Ingrid", 30: "Ingrid",
+  16: "Anja",
+  19: "Pål R", 35: "Pål R",
+  20: "Siri L", 28: "Siri L",
+  22: "Maiken",
+  23: "Renate",
+  33: "Lars",
+  34: "Kirsti",
+  36: "Sissel",
+  37: "Marianne", 41: "Marianne",
+  38: "Terje", 42: "Terje",
+  39: "Wenche", 43: "Wenche",
+  40: "Anita",
+  44: "Rene G", 45: "Rene G"
+};
+
+// Legger inn standardlisten på alle ukene
+const initialAllTickets = {
+  "Uke 45": { ...standardTicketMap },
+  "Uke 46": { ...standardTicketMap },
+  "Uke 47": { ...standardTicketMap },
+  "Uke 48": { ...standardTicketMap },
+  "Uke 49": { ...standardTicketMap },
+  "Uke 50": { ...standardTicketMap },
+  "Uke 51": { ...standardTicketMap }
+};
+
 const defaultPrizes = {
   "Uke 45": { title: "2 Flasker Utvalgt Vin", image1: vin1, image2: vin2, winner: "Rene G og Tore" },
   "Uke 46": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" },
@@ -34,14 +76,14 @@ const defaultPrizes = {
 export default function App() {
   const [activeTab, setActiveTab] = useState('lodd');
   const [prizes, setPrizes] = useState(defaultPrizes);
-  const [tickets, setTickets] = useState({});
+  const [tickets, setTickets] = useState(initialAllTickets);
   const [tips, setTips] = useState([]);
   const [feedback, setFeedback] = useState([]);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
-  // Filtrer bort uker som har vinnere fra "Kjøp lodd"-valget
+  // Aktive uker (ikke trukket ennå) og fullførte uker
   const activeWeeks = Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner);
   const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
 
@@ -66,8 +108,13 @@ export default function App() {
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "tickets"), (docSnap) => {
-      if (docSnap.exists()) setTickets(docSnap.data());
-      else setDoc(doc(db, "vinlotteri", "tickets"), {});
+      if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
+        setTickets(docSnap.data());
+      } else {
+        // Skriver inn standard eiernavn på alle uker hvis skydatabasen er tom
+        setTickets(initialAllTickets);
+        setDoc(doc(db, "vinlotteri", "tickets"), initialAllTickets);
+      }
     });
     return () => unsub();
   }, []);
@@ -123,7 +170,7 @@ export default function App() {
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
     setSelectedNumbers([]);
-    alert(`Gratulerer ${buyerName}! Du har valgt lodd: ${selectedNumbers.join(', ')}. Husk å Vippse!`);
+    alert(`Gratulerer ${buyerName}! Du har reservert lodd: ${selectedNumbers.join(', ')}. Husk å Vippse!`);
   };
 
   const handleDrawWinner = async (week) => {
@@ -171,9 +218,9 @@ export default function App() {
   };
 
   const handleResetAll = async () => {
-    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd og premier til standard?")) {
+    if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd på alle uker til standard?")) {
       await setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
-      await setDoc(doc(db, "vinlotteri", "tickets"), {});
+      await setDoc(doc(db, "vinlotteri", "tickets"), initialAllTickets);
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
       await setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
     }
@@ -207,7 +254,7 @@ export default function App() {
       <header style={{ padding: '20px', textAlign: 'center', backgroundColor: '#1c2541', borderBottom: '2px solid #3a506b' }}>
         <h1 style={{ margin: 0, color: '#f72585' }}>🍷 Digitalt Vinlotteri</h1>
         <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <button onClick={() => setActiveTab('lodd')} style={navBtnStyle(activeTab === 'lodd')}>🎟️ Kjøp Lodd</button>
+          <button onClick={() => setActiveTab('lodd')} style={navBtnStyle(activeTab === 'lodd')}>🎟️ Velg Lodd</button>
           <button onClick={() => setActiveTab('vinnere')} style={navBtnStyle(activeTab === 'vinnere')}>🏆 Vinnere</button>
           <button onClick={() => setShowPrizeModal(true)} style={navBtnStyle(false)}>🎁 Premier</button>
           <button onClick={() => setActiveTab('tips')} style={navBtnStyle(activeTab === 'tips')}>🍾 Vintips</button>
@@ -221,7 +268,7 @@ export default function App() {
         {/* FANER: Kjøp Lodd */}
         {activeTab === 'lodd' && (
           <div>
-            <h2>🎟️ Kjøp Lodd (1–50)</h2>
+            <h2>🎟️ Loddbord (1–50)</h2>
             
             {activeWeeks.length === 0 ? (
               <p style={{ color: '#4cc9f0' }}>Alle ukene er ferdig trukket!</p>
@@ -240,7 +287,7 @@ export default function App() {
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#2a9d8f', borderRadius: '3px', display: 'inline-block' }}></span> Grønn = Ledig
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt av deg
+                    <span style={{ width: '15px', height: '15px', backgroundColor: '#f72585', borderRadius: '3px', display: 'inline-block' }}></span> Rosa = Valgt nå
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#e63946', borderRadius: '3px', display: 'inline-block' }}></span> Rød = Opptatt (Navn vises)
@@ -308,7 +355,7 @@ export default function App() {
                   <p style={{ fontSize: '0.8em', color: '#8d99ae', marginTop: '8px' }}>💡 Husk å Vippse etter at du har reservert loddene dine!</p>
                 </form>
 
-                <h3>Kjøpte lodd i {selectedWeek}</h3>
+                <h3>Oversikt per person ({selectedWeek})</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
                   {Object.entries(getSummaryByPerson()).map(([person, lodd]) => (
                     <div key={person} style={{ backgroundColor: '#1c2541', padding: '12px', borderRadius: '6px', borderLeft: '4px solid #4cc9f0' }}>
@@ -399,7 +446,7 @@ export default function App() {
             ) : (
               <div>
                 <p style={{ color: '#4cc9f0' }}>✅ Du er innlogget som admin!</p>
-                <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '20px' }}>🔄 Tilbakestill alt til standard</button>
+                <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '20px' }}>🔄 Tilbakestill alt til standard på tvers av alle uker</button>
 
                 <h3>Trekk Vinner</h3>
                 {Object.keys(prizes).map(week => (
