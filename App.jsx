@@ -226,9 +226,7 @@ export default function App() {
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
     
-    // Tving åpning av Vipps direkte på mobilen
-    const vippsUrl = `https://qr.vipps.no/28/2/01/0/pay?recipientNumber=${VIPPS_NUMBER}&amount=${totalPrice * 100}&comment=Vinlotteri`;
-    window.location.href = vippsUrl;
+    alert(`Takk ${buyerName}! Reservasjonen på ${totalCartCount} lodd (${totalPrice} kr) er registrert som betalt/vippset. Lykke til!`);
 
     setCart({});
   };
@@ -430,7 +428,7 @@ export default function App() {
                   })}
                 </div>
 
-                {/* Skjema */}
+                {/* Skjema for kvittering av Vipps */}
                 <form onSubmit={handleBuyTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
                   <h3>🛒 Din handlekurv</h3>
                   
@@ -446,19 +444,19 @@ export default function App() {
                     </div>
                   )}
                   
-                  <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '6px', margin: '15px 0', borderLeft: '4px solid #ff5b24' }}>
-                    <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#4cc9f0' }}>
-                      💰 Å betale samlet: {totalPrice} kr <span style={{ fontSize: '0.8em', color: '#8d99ae', fontWeight: 'normal' }}>({totalCartCount} lodd totalt × 10 kr)</span>
+                  <div style={{ backgroundColor: '#0b132b', padding: '15px', borderRadius: '8px', margin: '15px 0', borderLeft: '5px solid #ff5b24' }}>
+                    <div style={{ fontSize: '1.15em', fontWeight: 'bold', color: '#4cc9f0' }}>
+                      💰 Totalsum: {totalPrice} kr <span style={{ fontSize: '0.8em', color: '#8d99ae', fontWeight: 'normal' }}>({totalCartCount} lodd × 10 kr)</span>
                     </div>
-                    <div style={{ fontSize: '0.95em', marginTop: '4px' }}>
-                      📱 Vipps til: <strong>{VIPPS_RECEIVER_NAME} ({VIPPS_NUMBER})</strong>
+                    <div style={{ fontSize: '1em', marginTop: '6px', color: '#ffffff' }}>
+                      📱 Vipps <strong>{totalPrice} kr</strong> til: <strong>{VIPPS_RECEIVER_NAME} ({VIPPS_NUMBER})</strong>
                     </div>
                   </div>
 
                   <input type="text" placeholder="Ditt Navn *" value={buyerName} onChange={e => setBuyerName(e.target.value)} style={inputStyle} required /><br/><br/>
                   
-                  <button type="submit" disabled={totalCartCount === 0} style={{ ...btnStyle, backgroundColor: '#ff5b24', color: '#fff', width: '100%', padding: '12px', fontSize: '1.1em', opacity: totalCartCount === 0 ? 0.5 : 1 }}>
-                    📲 Reserver og åpne Vipps ({totalPrice} kr)
+                  <button type="submit" disabled={totalCartCount === 0} style={{ ...btnStyle, backgroundColor: '#2a9d8f', color: '#fff', width: '100%', padding: '12px', fontSize: '1.05em', opacity: totalCartCount === 0 ? 0.5 : 1 }}>
+                    ✅ Reserver lodd og bekreft at du har Vippset
                   </button>
                 </form>
 
