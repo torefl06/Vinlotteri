@@ -72,6 +72,37 @@ const defaultPrizes = {
   "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" }
 };
 
+const navBtnStyle = (active) => ({
+  backgroundColor: active ? '#f72585' : '#3a506b',
+  color: '#fff',
+  border: 'none',
+  padding: '8px 14px',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  fontWeight: 'bold',
+  fontSize: '0.9em'
+});
+
+const inputStyle = {
+  backgroundColor: '#0b132b',
+  color: '#fff',
+  border: '1px solid #3a506b',
+  padding: '10px',
+  borderRadius: '6px',
+  width: '100%',
+  boxSizing: 'border-box'
+};
+
+const btnStyle = {
+  backgroundColor: '#f72585',
+  color: '#fff',
+  border: 'none',
+  padding: '10px 16px',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  fontWeight: 'bold'
+};
+
 const getAudioContext = () => new (window.AudioContext || window.webkitAudioContext)();
 
 const playSoftDrumroll = () => {
@@ -196,6 +227,7 @@ export default function App() {
   
   const [fbName, setFbName] = useState('');
   const [fbText, setFbText] = useState('');
+  const [replyInput, setReplyInput] = useState({});
 
   useEffect(() => {
     if (prizes[selectedWeek]?.winner && activeWeeks.length > 0) {
@@ -436,13 +468,92 @@ export default function App() {
     setTipName(''); setTipWine(''); setTipPrice(''); setTipDesc('');
   };
 
+  // --- ADMIN: Slette og Redigere Vintips ---
+  const handleDeleteTip = async (idToDelete) => {
+    if (!window.confirm("Vil du slette dette vintipset?")) return;
+    const updated = tips.filter(t => t.id !== idToDelete);
+    setTips(updated);
+    await setDoc(doc(db, "vinlotteri", "tips"), { list: updated });
+  };
+
+  const handleEditTip = async (tip) => {
+    const newWine = window.prompt("Rediger vinens navn:", tip.wine);
+    if (newWine === null) return;
+    const newPrice = window.prompt("Rediger pris (f.eks. 189 kr):", tip.price || "");
+    if (newPrice === null) return;
+    const newDesc = window.prompt("Rediger beskrivelse:", tip.desc);
+    if (newDesc === null) return;
+
+    const updated = tips.map(t => t.id === tip.id ? { ...t, wine: newWine, price: newPrice, desc: newDesc } : t);
+    setTips(updated);
+    await setDoc(doc(db, "vinlotteri", "tips"), { list: updated });
+  };
+
   const handleAddFeedback = async (e) => {
     e.preventDefault();
     if (!fbText) return;
-    const newFb = { id: Date.now(), name: fbName || 'Anonym', text: fbText, date: new Date().toLocaleDateString('no-NO') };
+    const newFb = { 
+      id: Date.now(), 
+      name: fbName || 'Anonym', 
+      text: fbText, 
+      replies: [], 
+      date: new Date().toLocaleDateString('no-NO') 
+    };
     const updated = [newFb, ...feedback];
     await setDoc(doc(db, "vinlotteri", "feedback"), { list: updated });
     setFbName(''); setFbText('');
+  };
+
+  // --- ADMIN: Slette og Redigere Ris & Ros ---
+  const handleDeleteFeedback = async (idToDelete) => {
+    if (!window.confirm("Vil du slette denne tilbakemeldingen?")) return;
+    const updated = feedback.filter(f => f.id !== idToDelete);
+    setFeedback(updated);
+    await setDoc(doc(db, "vinlotteri", "feedback"), { list: updated });
+  };
+
+  const handleEditFeedback = async (item) => {
+    const currentText = typeof item === 'object' ? item.text : item;
+    const newText = window.prompt("Rediger kommentar:", currentText);
+    if (newText === null) return;
+
+    const updated = feedback.map(f => {
+      if (f.id === item.id) {
+        return typeof f === 'object' ? { ...f, text: newText } : { id: Date.now(), name: 'Anonym', text: newText, replies: [] };
+      }
+      return f;
+    });
+    setFeedback(updated);
+    await setDoc(doc(db, "vinlotteri", "feedback"), { list: updated });
+  };
+
+  // --- TRÅDET SVAR SYSTEM FOR RIS & ROS ---
+  const handleAddReply = async (feedbackId) => {
+    const text = replyInput[feedbackId];
+    if (!text || !text.trim()) return;
+
+    const replyAuthor = buyerName || fbName || "Anonym";
+    const newReply = {
+      id: Date.now(),
+      name: replyAuthor,
+      text: text.trim(),
+      date: new Date().toLocaleDateString('no-NO')
+    };
+
+    const updated = feedback.map(f => {
+      if (f.id === feedbackId) {
+        const currentItem = typeof f === 'object' ? f : { id: feedbackId, name: 'Anonym', text: f, replies: [] };
+        return {
+          ...currentItem,
+          replies: [...(currentItem.replies || []), newReply]
+        };
+      }
+      return f;
+    });
+
+    setFeedback(updated);
+    setReplyInput({ ...replyInput, [feedbackId]: '' });
+    await setDoc(doc(db, "vinlotteri", "feedback"), { list: updated });
   };
 
   const handleAdminLogin = (e) => {
@@ -663,7 +774,15 @@ export default function App() {
               <div key={t.id} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '10px', borderLeft: '4px solid #f72585' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h4 style={{ margin: '0 0 5px 0', color: '#f72585', fontSize: '1.2em' }}>{t.wine}</h4>
-                  {t.price && <span style={{ backgroundColor: '#2a9d8f', padding: '3px 8px', borderRadius: '12px', fontSize: '0.85em', fontWeight: 'bold' }}>🏷️ {t.price}</span>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {t.price && <span style={{ backgroundColor: '#2a9d8f', padding: '3px 8px', borderRadius: '12px', fontSize: '0.85em', fontWeight: 'bold' }}>🏷️ {t.price}</span>}
+                    {isAdmin && (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => handleEditTip(t)} style={{ backgroundColor: '#3a506b', color: '#4cc9f0', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8em' }}>Rediger</button>
+                        <button onClick={() => handleDeleteTip(t.id)} style={{ backgroundColor: '#e63946', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8em' }}>Slett</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <p style={{ margin: '8px 0' }}>{t.desc}</p>
                 <small style={{ color: '#8d99ae' }}>Innsendt av {t.name} – {t.date}</small>
@@ -683,12 +802,60 @@ export default function App() {
               <button type="submit" style={btnStyle}>Send inn</button>
             </form>
 
-            {feedback.map(f => (
-              <div key={f.id} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '10px', borderLeft: '4px solid #4cc9f0' }}>
-                <p style={{ margin: '0 0 8px 0', fontSize: '1.05em' }}>"{f.text}"</p>
-                <small style={{ color: '#8d99ae' }}>– {f.name} ({f.date})</small>
-              </div>
-            ))}
+            {feedback.map(f => {
+              const isObj = typeof f === 'object' && f !== null;
+              const fId = isObj ? f.id : f;
+              const text = isObj ? f.text : f;
+              const name = isObj ? (f.name || 'Anonym') : 'Anonym';
+              const date = isObj ? f.date : '';
+              const replies = isObj && f.replies ? f.replies : [];
+
+              return (
+                <div key={fId} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '12px', borderLeft: '4px solid #4cc9f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <p style={{ margin: '0 0 8px 0', fontSize: '1.05em' }}>"{text}"</p>
+                    {isAdmin && (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => handleEditFeedback(f)} style={{ backgroundColor: '#3a506b', color: '#4cc9f0', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8em' }}>Rediger</button>
+                        <button onClick={() => handleDeleteFeedback(fId)} style={{ backgroundColor: '#e63946', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8em' }}>Slett</button>
+                      </div>
+                    )}
+                  </div>
+                  <small style={{ color: '#8d99ae' }}>– {name} {date && `(${date})`}</small>
+
+                  {/* Underkommentarer / Svar */}
+                  {replies.length > 0 && (
+                    <div style={{ marginTop: '10px', paddingLeft: '12px', borderLeft: '2px solid #3a506b', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {replies.map(r => (
+                        <div key={r.id} style={{ backgroundColor: '#0b132b', padding: '8px 10px', borderRadius: '6px', fontSize: '0.9em' }}>
+                          <strong style={{ color: '#4cc9f0' }}>{r.name}: </strong>
+                          <span>{r.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Svar Input felt */}
+                  <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Skriv et svar..."
+                      value={replyInput[fId] || ''}
+                      onChange={e => setReplyInput({ ...replyInput, [fId]: e.target.value })}
+                      style={{ ...inputStyle, padding: '6px 10px', fontSize: '0.85em' }}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddReply(fId))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddReply(fId)}
+                      style={{ ...btnStyle, padding: '6px 12px', fontSize: '0.85em', backgroundColor: '#3a506b' }}
+                    >
+                      Svar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -728,33 +895,18 @@ export default function App() {
                           >
                             🎲 Trekk Flaske 1
                           </button>
-
                           <button 
                             onClick={() => drawSingleBottle(week, 2)} 
                             disabled={!hasWinner1 || hasWinner2} 
-                            style={{ ...btnStyle, backgroundColor: '#f72585', color: '#fff', opacity: (!hasWinner1 || hasWinner2) ? 0.4 : 1 }}
+                            style={{ ...btnStyle, opacity: (!hasWinner1 || hasWinner2) ? 0.4 : 1 }}
                           >
                             🎲 Trekk Flaske 2
                           </button>
-
-                          {(hasWinner1 || hasWinner2) && (
-                            <button 
-                              onClick={() => cancelDrawAndResetWeek(week)}
-                              style={{ ...btnStyle, backgroundColor: '#d90429', color: '#fff' }}
-                            >
-                              🔄 Annuller påbegynt trekning
-                            </button>
-                          )}
                         </div>
                       ) : (
-                        <div>
-                          <button 
-                            onClick={() => undoCompletedWeekDraw(week)}
-                            style={{ ...btnStyle, backgroundColor: '#d90429', color: '#fff', marginTop: '5px' }}
-                          >
-                            ↩️ Annuller fullført trekning for {week}
-                          </button>
-                        </div>
+                        <button onClick={() => undoCompletedWeekDraw(week)} style={{ ...btnStyle, backgroundColor: '#e63946', fontSize: '0.85em' }}>
+                          ↩️ Annuller trekning
+                        </button>
                       )}
                     </div>
                   );
@@ -765,181 +917,6 @@ export default function App() {
         )}
 
       </main>
-
-      {/* POPUP FOR BETALINGSBEKREFTELSE */}
-      {showPaymentConfirmModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', zIndex: 3000 }}>
-          <div style={{ backgroundColor: '#1c2541', borderRadius: '12px', padding: '25px', maxWidth: '450px', width: '100%', textAlign: 'center', border: '3px solid #ff5b24' }}>
-            <h2 style={{ color: '#ff5b24', margin: '0 0 10px 0' }}>📱 Har du betalt?</h2>
-            <p style={{ fontSize: '1.05em', lineHeight: '1.4' }}>
-              Du er i ferd med å låse <strong>{totalCartCount} lodd</strong> for <strong>{buyerName}</strong>.
-            </p>
-            <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '8px', margin: '15px 0' }}>
-              <div style={{ color: '#4cc9f0', fontWeight: 'bold', fontSize: '1.2em' }}>Totalsum: {totalPrice} kr</div>
-              <div style={{ fontSize: '0.9em', marginTop: '4px', color: '#aaa' }}>Vipps til: {VIPPS_RECEIVER_NAME} ({VIPPS_NUMBER})</div>
-            </div>
-
-            <p style={{ fontSize: '0.95em', color: '#e63946', fontWeight: 'bold' }}>
-              Vennligst bekreft at du har Vippset før du låser loddene!
-            </p>
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button 
-                onClick={() => setShowPaymentConfirmModal(false)} 
-                style={{ ...btnStyle, backgroundColor: '#3a506b', color: '#fff', flex: 1, padding: '10px' }}
-              >
-                ❌ Nei, avbryt
-              </button>
-              
-              <button 
-                onClick={confirmAndLockTickets} 
-                style={{ ...btnStyle, backgroundColor: '#2a9d8f', color: '#fff', flex: 1, padding: '10px', fontSize: '1.05em' }}
-              >
-                ✅ Ja, jeg har Vippset!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* POPUP FOR BEKREFTELSE AV FULLFØRT TREKNING */}
-      {showDrawConfirmModal && pendingWinnerWeek && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', zIndex: 3500 }}>
-          <div style={{ backgroundColor: '#1c2541', borderRadius: '12px', padding: '25px', maxWidth: '500px', width: '100%', textAlign: 'center', border: '3px solid #f72585' }}>
-            <h2 style={{ color: '#f72585', margin: '0 0 10px 0' }}>🎲 Er trekningen foretatt?</h2>
-            <p style={{ fontSize: '1.05em' }}>
-              Begge flasker for <strong>{pendingWinnerWeek}</strong> er trukket:
-            </p>
-            
-            <div style={{ backgroundColor: '#0b132b', padding: '15px', borderRadius: '8px', margin: '15px 0', textAlign: 'left', fontSize: '0.95em' }}>
-              <div style={{ color: '#4cc9f0', marginBottom: '6px' }}>🍾 <strong>Flaske 1:</strong> {bottle1Winners[pendingWinnerWeek]}</div>
-              <div style={{ color: '#f72585' }}>🍾 <strong>Flaske 2:</strong> {bottle2Winners[pendingWinnerWeek]}</div>
-            </div>
-
-            <p style={{ fontSize: '0.9em', color: '#aaa' }}>
-              Trykker du «Ja, lås trekningen» blir uken markert som fullført og lagt til vinneroversikten.
-            </p>
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button 
-                onClick={() => cancelDrawAndResetWeek(pendingWinnerWeek)} 
-                style={{ ...btnStyle, backgroundColor: '#d90429', color: '#fff', flex: 1, padding: '10px' }}
-              >
-                🔄 Nei, annuller / prøv på nytt
-              </button>
-              
-              <button 
-                onClick={lockDrawAndCompleteWeek} 
-                style={{ ...btnStyle, backgroundColor: '#2a9d8f', color: '#fff', flex: 1, padding: '10px', fontSize: '1.05em' }}
-              >
-                ✅ Ja, lås trekningen!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* OVERLAY POPUP FOR STEG-FOR-STEG TREKNING */}
-      {isDrawing && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2000, color: '#fff', padding: '20px' }}>
-          <h2 style={{ color: '#4cc9f0', marginBottom: '20px' }}>{drawingTitle}</h2>
-          
-          <div style={{ backgroundColor: '#1c2541', padding: '40px 60px', borderRadius: '25px', border: '4px solid #f72585', textAlign: 'center', margin: '20px 0', minWidth: '280px', boxShadow: '0 0 30px rgba(247,37,133,0.3)' }}>
-            
-            <div style={{ fontSize: '5em', fontWeight: 'bold', color: '#f72585' }}>
-              #{animatedTicket}
-            </div>
-
-            {drawStep >= 2 && (
-              <div style={{ fontSize: '1.8em', color: '#ffb703', marginTop: '15px', fontWeight: 'bold', fontStyle: 'italic' }}>
-                Vinneren er.........
-              </div>
-            )}
-
-            {drawStep === 3 && (
-              <div style={{ fontSize: '2.5em', color: '#4cc9f0', marginTop: '15px', fontWeight: 'bold' }}>
-                🎉 {revealedWinnerName}! 🎉
-              </div>
-            )}
-          </div>
-
-          {drawStep === 3 && (
-            <button onClick={handleFinishDrawingOverlay} style={{ ...btnStyle, padding: '14px 28px', fontSize: '1.2em', marginTop: '20px', backgroundColor: '#f72585', color: '#fff' }}>
-              ✖ Lukk og fortsett
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* PREMIE MODAL */}
-      {showPrizeModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#1c2541', borderRadius: '12px', padding: '20px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0, color: '#f72585' }}>PREMIER - {selectedWeek}</h3>
-              <button onClick={() => setShowPrizeModal(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#fff', fontSize: '1.2em', cursor: 'pointer' }}>✖ Lukk</button>
-            </div>
-
-            <p style={{ fontWeight: 'bold' }}>{prizes[selectedWeek]?.title}</p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
-              <div style={{ textTransform: 'uppercase', fontSize: '0.8em', color: '#8d99ae' }}>
-                <div>Flaske 1</div>
-                <div style={{ height: '200px', backgroundColor: '#0b132b', borderRadius: '8px', overflow: 'hidden', marginTop: '5px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  {prizes[selectedWeek]?.image1 ? <img src={prizes[selectedWeek].image1} alt="Flaske 1" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} /> : <span>Ingen bilde</span>}
-                </div>
-              </div>
-              <div style={{ textTransform: 'uppercase', fontSize: '0.8em', color: '#8d99ae' }}>
-                <div>Flaske 2</div>
-                <div style={{ height: '200px', backgroundColor: '#0b132b', borderRadius: '8px', overflow: 'hidden', marginTop: '5px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  {prizes[selectedWeek]?.image2 ? <img src={prizes[selectedWeek].image2} alt="Flaske 2" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} /> : <span>Ingen bilde</span>}
-                </div>
-              </div>
-            </div>
-
-            {isAdmin && (
-              <div style={{ marginTop: '20px', borderTop: '1px solid #3a506b', paddingTop: '15px' }}>
-                <h4>📷 Admin: Endre bilde ({selectedWeek})</h4>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(selectedWeek, 'image1', e.target.files[0])} style={{ fontSize: '0.8em' }} />
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(selectedWeek, 'image2', e.target.files[0])} style={{ fontSize: '0.8em' }} />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
-
-const navBtnStyle = (active) => ({
-  backgroundColor: active ? '#f72585' : '#3a506b',
-  color: '#ffffff',
-  border: 'none',
-  padding: '8px 16px',
-  borderRadius: '20px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-  fontSize: '0.9em'
-});
-
-const btnStyle = {
-  backgroundColor: '#4cc9f0',
-  color: '#000000',
-  border: 'none',
-  padding: '8px 14px',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  fontWeight: 'bold'
-};
-
-const inputStyle = {
-  width: '100%',
-  padding: '8px',
-  borderRadius: '4px',
-  border: '1px solid #3a506b',
-  backgroundColor: '#0b132b',
-  color: '#fff',
-  boxSizing: 'border-box'
-};
