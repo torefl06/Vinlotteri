@@ -20,7 +20,7 @@ const db = getFirestore(app);
 
 const TOTAL_TICKETS = 50;
 
-// Alle opprinnelige lodd fra den faste listen
+// Alle eksakte lodd fra det opprinnelige bildet
 const initialUke45Tickets = {
   1: "Pål E", 24: "Pål E",
   2: "Trine", 31: "Trine",
@@ -82,22 +82,25 @@ export default function App() {
   const [fbName, setFbName] = useState('');
   const [fbText, setFbText] = useState('');
 
-  // Firebase lyttere
+  // Automatisk tving-innlasting av opprinnelig liste til Firebase om den er tom
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "vinlotteri", "prizes"), (docSnap) => {
-      if (docSnap.exists()) setPrizes(docSnap.data());
-      else setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
+    const unsub = onSnapshot(doc(db, "vinlotteri", "tickets"), (docSnap) => {
+      if (docSnap.exists() && docSnap.data()["Uke 45"] && Object.keys(docSnap.data()["Uke 45"]).length > 0) {
+        setTickets(docSnap.data());
+      } else {
+        // Hvis skydatabasen er tom for uke 45, skriver vi inn alle de opprinnelige navnenavnene med én gang!
+        const autoData = { "Uke 45": initialUke45Tickets };
+        setTickets(autoData);
+        setDoc(doc(db, "vinlotteri", "tickets"), autoData);
+      }
     });
     return () => unsub();
   }, []);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "vinlotteri", "tickets"), (docSnap) => {
-      if (docSnap.exists()) {
-        setTickets(docSnap.data());
-      } else {
-        setDoc(doc(db, "vinlotteri", "tickets"), { "Uke 45": initialUke45Tickets });
-      }
+    const unsub = onSnapshot(doc(db, "vinlotteri", "prizes"), (docSnap) => {
+      if (docSnap.exists()) setPrizes(docSnap.data());
+      else setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
     });
     return () => unsub();
   }, []);
@@ -136,7 +139,7 @@ export default function App() {
       return;
     }
     if (selectedNumbers.length === 0) {
-      alert("Vennligst velg minst ett ledig grønt lodd i rutenettet.");
+      alert("Vennligst velg minst ett ledig grønt lodd.");
       return;
     }
 
@@ -153,7 +156,7 @@ export default function App() {
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
     setSelectedNumbers([]);
-    alert(`Gratulerer ${buyerName}! Du har reservert lodd: ${selectedNumbers.join(', ')}. Husk å Vippse for loddene!`);
+    alert(`Gratulerer ${buyerName}! Du har reservert lodd: ${selectedNumbers.join(', ')}. Husk å Vippse!`);
   };
 
   const handleDrawWinner = async (week) => {
@@ -276,7 +279,7 @@ export default function App() {
               </span>
             </div>
 
-            {/* Interaktivt Loddrutenett 1-50 */}
+            {/* Loddrutenett 1-50 */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
               {Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1).map(num => {
                 const isTaken = !!currentWeekTickets[num];
