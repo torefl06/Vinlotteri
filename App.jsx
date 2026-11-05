@@ -573,16 +573,32 @@ export default function App() {
     }
   };
 
+  // --- KOMPRIMERING & BILDEOPPLASTING (unngår Firestore 1MB-feil) ---
   const handleImageUpload = (week, field, file) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = async () => {
-      const updated = {
-        ...prizes,
-        [week]: { ...prizes[week], [field]: reader.result }
+    reader.onloadend = () => {
+      const img = new Image();
+      img.src = reader.result;
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 500;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+
+        const updated = {
+          ...prizes,
+          [week]: { ...(prizes[week] || {}), [field]: compressedBase64 }
+        };
+        setPrizes(updated);
+        await setDoc(doc(db, "vinlotteri", "prizes"), updated);
       };
-      setPrizes(updated);
-      await setDoc(doc(db, "vinlotteri", "prizes"), updated);
     };
     reader.readAsDataURL(file);
   };
@@ -603,7 +619,7 @@ export default function App() {
         <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button onClick={() => setActiveTab('lodd')} style={navBtnStyle(activeTab === 'lodd')}>🎟️ Velg Lodd</button>
           <button onClick={() => setActiveTab('vinnere')} style={navBtnStyle(activeTab === 'vinnere')}>🏆 Vinnere</button>
-          <button onClick={() => setShowPrizeModal(true)} style={navBtnStyle(false)}>🎁 Premier</button>
+          <button onClick={() => setShowPrizeModal(true)} style={navBtnStyle(showPrizeModal)}>🎁 Premier</button>
           <button onClick={() => setActiveTab('tips')} style={navBtnStyle(activeTab === 'tips')}>🍾 Vintips</button>
           <button onClick={() => setActiveTab('feedback')} style={navBtnStyle(activeTab === 'feedback')}>💬 Ris & Ros</button>
           <button onClick={() => setActiveTab('admin')} style={navBtnStyle(activeTab === 'admin')}>⚙️ Admin</button>
@@ -612,6 +628,51 @@ export default function App() {
 
       <main style={{ maxWidth: '900px', margin: '20px auto', padding: '0 15px' }}>
         
+        {/* MODAL FOR PREMIER */}
+        {showPrizeModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
+            <div style={{ backgroundColor: '#1c2541', padding: '25px', borderRadius: '12px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '2px solid #f72585' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h2 style={{ margin: 0, color: '#f72585' }}>🎁 Premier for {selectedWeek}</h2>
+                <button onClick={() => setShowPrizeModal(false)} style={{ backgroundColor: '#e63946', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>✖ Lukk</button>
+              </div>
+
+              {/* Vis bilde 1 og bilde 2 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ textAlign: 'center', backgroundColor: '#0b132b', padding: '10px', borderRadius: '8px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#4cc9f0' }}>Flaske 1</h4>
+                  {prizes[selectedWeek]?.image1 ? (
+                    <img src={prizes[selectedWeek].image1} alt="Premie 1" style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '6px' }} />
+                  ) : (
+                    <div style={{ height: '180px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#8d99ae', border: '1px dashed #3a506b', borderRadius: '6px' }}>Ingen bilde enda</div>
+                  )}
+                  {isAdmin && (
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(selectedWeek, 'image1', e.target.files[0])} style={{ marginTop: '8px', fontSize: '0.75em', width: '100%' }} />
+                  )}
+                </div>
+
+                <div style={{ textAlign: 'center', backgroundColor: '#0b132b', padding: '10px', borderRadius: '8px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#4cc9f0' }}>Flaske 2</h4>
+                  {prizes[selectedWeek]?.image2 ? (
+                    <img src={prizes[selectedWeek].image2} alt="Premie 2" style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '6px' }} />
+                  ) : (
+                    <div style={{ height: '180px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#8d99ae', border: '1px dashed #3a506b', borderRadius: '6px' }}>Ingen bilde enda</div>
+                  )}
+                  {isAdmin && (
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(selectedWeek, 'image2', e.target.files[0])} style={{ marginTop: '8px', fontSize: '0.75em', width: '100%' }} />
+                  )}
+                </div>
+              </div>
+
+              {prizes[selectedWeek]?.winner && (
+                <div style={{ backgroundColor: '#2a9d8f', padding: '10px', borderRadius: '6px', textAlign: 'center', fontWeight: 'bold' }}>
+                  🏆 Vinner i {selectedWeek}: {prizes[selectedWeek].winner}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* FANER: Kjøp Lodd */}
         {activeTab === 'lodd' && (
           <div>
