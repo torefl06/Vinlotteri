@@ -132,10 +132,13 @@ export default function App() {
   const [selectedWeek, setSelectedWeek] = useState(activeWeeks[0] || 'Uke 46');
   const [cart, setCart] = useState({});
   const [buyerName, setBuyerName] = useState('');
+  const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
 
   const [tipName, setTipName] = useState('');
   const [tipWine, setTipWine] = useState('');
+  const [tipPrice, setTipPrice] = useState('');
   const [tipDesc, setTipDesc] = useState('');
+  
   const [fbName, setFbName] = useState('');
   const [fbText, setFbText] = useState('');
 
@@ -200,7 +203,7 @@ export default function App() {
   const totalCartCount = Object.values(cart).reduce((sum, nums) => sum + nums.length, 0);
   const totalPrice = totalCartCount * TICKET_PRICE;
 
-  const handleBuyTickets = async (e) => {
+  const handleOpenPaymentPrompt = (e) => {
     e.preventDefault();
     if (!buyerName.trim()) {
       alert("Vennligst skriv inn navnet ditt.");
@@ -210,7 +213,11 @@ export default function App() {
       alert("Vennligst velg minst ett ledig grønt lodd.");
       return;
     }
+    // Åpne bekreftelsespopup
+    setShowPaymentConfirmModal(true);
+  };
 
+  const confirmAndLockTickets = async () => {
     const updatedTickets = { ...tickets };
 
     Object.entries(cart).forEach(([week, nums]) => {
@@ -226,8 +233,8 @@ export default function App() {
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
     
-    alert(`Takk ${buyerName}! Reservasjonen på ${totalCartCount} lodd (${totalPrice} kr) er registrert som betalt/vippset. Lykke til!`);
-
+    setShowPaymentConfirmModal(false);
+    alert(`Gratulerer ${buyerName}! Deres ${totalCartCount} lodd er nå låst. Lykke til i trekningen!`);
     setCart({});
   };
 
@@ -284,11 +291,18 @@ export default function App() {
   const handleAddTip = async (e) => {
     e.preventDefault();
     if (!tipWine || !tipDesc) return;
-    const newTip = { id: Date.now(), name: tipName || 'Anonym', wine: tipWine, desc: tipDesc, date: new Date().toLocaleDateString('no-NO') };
+    const newTip = { 
+      id: Date.now(), 
+      name: tipName || 'Anonym', 
+      wine: tipWine, 
+      price: tipPrice ? `${tipPrice} kr` : 'Ukjent pris',
+      desc: tipDesc, 
+      date: new Date().toLocaleDateString('no-NO') 
+    };
     const updated = [newTip, ...tips];
     setTips(updated);
     await setDoc(doc(db, "vinlotteri", "tips"), { list: updated });
-    setTipName(''); setTipWine(''); setTipDesc('');
+    setTipName(''); setTipWine(''); setTipPrice(''); setTipDesc('');
   };
 
   const handleAddFeedback = async (e) => {
@@ -428,8 +442,8 @@ export default function App() {
                   })}
                 </div>
 
-                {/* Skjema for kvittering av Vipps */}
-                <form onSubmit={handleBuyTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
+                {/* Skjema */}
+                <form onSubmit={handleOpenPaymentPrompt} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
                   <h3>🛒 Din handlekurv</h3>
                   
                   {totalCartCount === 0 ? (
@@ -444,19 +458,19 @@ export default function App() {
                     </div>
                   )}
                   
-                  <div style={{ backgroundColor: '#0b132b', padding: '15px', borderRadius: '8px', margin: '15px 0', borderLeft: '5px solid #ff5b24' }}>
-                    <div style={{ fontSize: '1.15em', fontWeight: 'bold', color: '#4cc9f0' }}>
+                  <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '6px', margin: '15px 0', borderLeft: '4px solid #ff5b24' }}>
+                    <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#4cc9f0' }}>
                       💰 Totalsum: {totalPrice} kr <span style={{ fontSize: '0.8em', color: '#8d99ae', fontWeight: 'normal' }}>({totalCartCount} lodd × 10 kr)</span>
                     </div>
-                    <div style={{ fontSize: '1em', marginTop: '6px', color: '#ffffff' }}>
-                      📱 Vipps <strong>{totalPrice} kr</strong> til: <strong>{VIPPS_RECEIVER_NAME} ({VIPPS_NUMBER})</strong>
+                    <div style={{ fontSize: '0.95em', marginTop: '4px' }}>
+                      📱 Vipps til: <strong>{VIPPS_RECEIVER_NAME} ({VIPPS_NUMBER})</strong>
                     </div>
                   </div>
 
                   <input type="text" placeholder="Ditt Navn *" value={buyerName} onChange={e => setBuyerName(e.target.value)} style={inputStyle} required /><br/><br/>
                   
-                  <button type="submit" disabled={totalCartCount === 0} style={{ ...btnStyle, backgroundColor: '#2a9d8f', color: '#fff', width: '100%', padding: '12px', fontSize: '1.05em', opacity: totalCartCount === 0 ? 0.5 : 1 }}>
-                    ✅ Reserver lodd og bekreft at du har Vippset
+                  <button type="submit" disabled={totalCartCount === 0} style={{ ...btnStyle, backgroundColor: '#2a9d8f', color: '#fff', width: '100%', padding: '12px', fontSize: '1.1em', opacity: totalCartCount === 0 ? 0.5 : 1 }}>
+                    🔒 Lås mine lodd
                   </button>
                 </form>
 
@@ -497,22 +511,30 @@ export default function App() {
           </div>
         )}
 
-        {/* FANER: Vintips */}
+        {/* FANER: Vintips med Pris */}
         {activeTab === 'tips' && (
           <div>
             <h2>🍾 Vintips fra Kollegaer</h2>
             <form onSubmit={handleAddTip} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
               <h3>Send inn ditt vintips</h3>
               <input type="text" placeholder="Ditt navn (valgfritt)" value={tipName} onChange={e => setTipName(e.target.value)} style={inputStyle} /><br/><br/>
-              <input type="text" placeholder="Vinens navn *" value={tipWine} onChange={e => setTipWine(e.target.value)} style={inputStyle} required /><br/><br/>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
+                <input type="text" placeholder="Vinens navn *" value={tipWine} onChange={e => setTipWine(e.target.value)} style={inputStyle} required />
+                <input type="number" placeholder="Pris (kr)" value={tipPrice} onChange={e => setTipPrice(e.target.value)} style={inputStyle} />
+              </div><br/>
+
               <textarea placeholder="Hvorfor anbefaler du denne? *" value={tipDesc} onChange={e => setTipDesc(e.target.value)} style={{ ...inputStyle, height: '60px' }} required /><br/><br/>
               <button type="submit" style={btnStyle}>Legg til Vintips</button>
             </form>
 
             {tips.map(t => (
-              <div key={t.id} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
-                <h4 style={{ margin: '0 0 5px 0', color: '#f72585' }}>{t.wine}</h4>
-                <p style={{ margin: '0 0 8px 0' }}>{t.desc}</p>
+              <div key={t.id} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '10px', borderLeft: '4px solid #f72585' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: '0 0 5px 0', color: '#f72585', fontSize: '1.2em' }}>{t.wine}</h4>
+                  {t.price && <span style={{ backgroundColor: '#2a9d8f', padding: '3px 8px', borderRadius: '12px', fontSize: '0.85em', fontWeight: 'bold' }}>🏷️ {t.price}</span>}
+                </div>
+                <p style={{ margin: '8px 0' }}>{t.desc}</p>
                 <small style={{ color: '#8d99ae' }}>Innsendt av {t.name} – {t.date}</small>
               </div>
             ))}
@@ -593,6 +615,42 @@ export default function App() {
         )}
 
       </main>
+
+      {/* POPUP FOR BETALINGSBEKREFTELSE / PÅMINNELSE */}
+      {showPaymentConfirmModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', zIndex: 3000 }}>
+          <div style={{ backgroundColor: '#1c2541', borderRadius: '12px', padding: '25px', maxWidth: '450px', width: '100%', textAlign: 'center', border: '3px solid #ff5b24' }}>
+            <h2 style={{ color: '#ff5b24', margin: '0 0 10px 0' }}>📱 Har du betalt?</h2>
+            <p style={{ fontSize: '1.05em', lineHeight: '1.4' }}>
+              Du er i ferd med å låse <strong>{totalCartCount} lodd</strong> for <strong>{buyerName}</strong>.
+            </p>
+            <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '8px', margin: '15px 0' }}>
+              <div style={{ color: '#4cc9f0', fontWeight: 'bold', fontSize: '1.2em' }}>Totalsum: {totalPrice} kr</div>
+              <div style={{ fontSize: '0.9em', marginTop: '4px', color: '#aaa' }}>Vipps til: {VIPPS_RECEIVER_NAME} ({VIPPS_NUMBER})</div>
+            </div>
+
+            <p style={{ fontSize: '0.95em', color: '#e63946', fontWeight: 'bold' }}>
+              Vennligst bekreft at du har Vippset før du låser loddene!
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button 
+                onClick={() => setShowPaymentConfirmModal(false)} 
+                style={{ ...btnStyle, backgroundColor: '#3a506b', color: '#fff', flex: 1, padding: '10px' }}
+              >
+                ❌ Nei, avbryt
+              </button>
+              
+              <button 
+                onClick={confirmAndLockTickets} 
+                style={{ ...btnStyle, backgroundColor: '#2a9d8f', color: '#fff', flex: 1, padding: '10px', fontSize: '1.05em' }}
+              >
+                ✅ Ja, jeg har Vippset!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* OVERLAY POPUP FOR VISUELL TREKNING MED LYD */}
       {isDrawing && (
