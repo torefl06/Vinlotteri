@@ -72,7 +72,7 @@ const defaultPrizes = {
   "Uke 51": { title: "2 Flasker Utvalgt Vin", image1: "", image2: "", winner: "" }
 };
 
-// Varmere, dypere og mer behagelige syntetiske lyder via Web Audio API
+// MYKE OG VARME LYDER (WEB AUDIO API)
 const getAudioContext = () => new (window.AudioContext || window.webkitAudioContext)();
 
 const playSoftDrumroll = () => {
@@ -82,14 +82,14 @@ const playSoftDrumroll = () => {
     const gain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(140, ctx.currentTime);
+    osc.type = 'sine'; // Varm sinusbølge
+    osc.frequency.setValueAtTime(90, ctx.currentTime); // Dyp og behagelig bass
     
-    // Lavpassfilter gjør lyden dyp, myk og lun i stedet for skarp
+    // Streng lowpass-filtrering fjerner ALT av spisse frekvenser
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(350, ctx.currentTime);
+    filter.frequency.setValueAtTime(180, ctx.currentTime);
 
-    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+    gain.gain.setValueAtTime(0.04, ctx.currentTime);
     
     osc.connect(filter);
     filter.connect(gain);
@@ -103,18 +103,28 @@ const playSoftDrumroll = () => {
 const playSuspenseChime = () => {
   try {
     const ctx = getAudioContext();
-    const notes = [329.63, 392.00, 493.88]; // E-moll varm akkord
+    // Varm og dyp C-dur akkord
+    const notes = [130.81, 164.81, 196.00]; 
     notes.forEach(freq => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
-      osc.connect(gain);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(300, ctx.currentTime);
+
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
+
+      osc.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
+
       osc.start();
-      osc.stop(ctx.currentTime + 1.8);
+      osc.stop(ctx.currentTime + 2.0);
     });
   } catch (e) { console.log(e); }
 };
@@ -122,22 +132,31 @@ const playSuspenseChime = () => {
 const playHarmonicFanfare = () => {
   try {
     const ctx = getAudioContext();
+    // Myke og rolige C-dur akkorder som toner pent ut
     const chords = [
-      { freqs: [261.63, 329.63, 392.00], time: 0, duration: 0.3 },   // C-dur
-      { freqs: [349.23, 440.00, 523.25], time: 0.35, duration: 0.4 }, // F-dur
-      { freqs: [523.25, 659.25, 783.99], time: 0.8, duration: 1.5 }   // Høyt C-dur jubel
+      { freqs: [261.63, 329.63, 392.00], time: 0, duration: 0.5 },
+      { freqs: [329.63, 392.00, 523.25], time: 0.4, duration: 1.8 }
     ];
 
     chords.forEach(chord => {
       chord.freqs.forEach(freq => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'triangle'; // Myk og behagelig klang
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, ctx.currentTime + chord.time);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime + chord.time);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, ctx.currentTime + chord.time);
+
+        gain.gain.setValueAtTime(0.05, ctx.currentTime + chord.time);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + chord.time + chord.duration);
-        osc.connect(gain);
+
+        osc.connect(filter);
+        filter.connect(gain);
         gain.connect(ctx.destination);
+
         osc.start(ctx.currentTime + chord.time);
         osc.stop(ctx.currentTime + chord.time + chord.duration);
       });
@@ -159,11 +178,10 @@ export default function App() {
   const [bottle2Winners, setBottle2Winners] = useState({});
   const [pendingWinnerWeek, setPendingWinnerWeek] = useState(null);
 
-  // Steg-for-steg trekningsanimasjon
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingTitle, setDrawingTitle] = useState('');
   const [animatedTicket, setAnimatedTicket] = useState(null);
-  const [drawStep, setDrawStep] = useState(1); // 1 = Snurrer lodd, 2 = "Vinneren er...", 3 = Navn avdekket
+  const [drawStep, setDrawStep] = useState(1);
   const [revealedWinnerName, setRevealedWinnerName] = useState('');
   const [showDrawConfirmModal, setShowDrawConfirmModal] = useState(false);
 
@@ -278,7 +296,6 @@ export default function App() {
     setCart({});
   };
 
-  // DRAMATISK STEG-FOR-STEG TREKNING MED KOSELIG LYD
   const drawSingleBottle = (week, bottleNumber) => {
     const weekTickets = tickets[week] || {};
     const takenTicketNumbers = Object.keys(weekTickets);
@@ -300,7 +317,6 @@ export default function App() {
       setAnimatedTicket(randomTicket);
       counter++;
 
-      // STEG 1 FERDIG: Viser vinnerlodd
       if (counter > 25) {
         clearInterval(interval);
         
@@ -310,11 +326,9 @@ export default function App() {
 
         setAnimatedTicket(winningTicket);
         
-        // GÅ TIL STEG 2: "Vinneren er........." + Spenningslyd
         setDrawStep(2);
         playSuspenseChime();
 
-        // PAUSE PÅ 2.5 SEKUNDER FØR STEG 3 (AVDEKKING AV NAVN)
         setTimeout(() => {
           setDrawStep(3);
           setRevealedWinnerName(winnerName);
@@ -815,26 +829,23 @@ export default function App() {
         </div>
       )}
 
-      {/* OVERLAY POPUP FOR DRAMATISK 3-STEGS TREKNING MED VAKKER LYD */}
+      {/* OVERLAY POPUP FOR STEG-FOR-STEG TREKNING */}
       {isDrawing && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2000, color: '#fff', padding: '20px' }}>
           <h2 style={{ color: '#4cc9f0', marginBottom: '20px' }}>{drawingTitle}</h2>
           
           <div style={{ backgroundColor: '#1c2541', padding: '40px 60px', borderRadius: '25px', border: '4px solid #f72585', textAlign: 'center', margin: '20px 0', minWidth: '280px', boxShadow: '0 0 30px rgba(247,37,133,0.3)' }}>
             
-            {/* STEG 1: LODD VISES */}
             <div style={{ fontSize: '5em', fontWeight: 'bold', color: '#f72585' }}>
               #{animatedTicket}
             </div>
 
-            {/* STEG 2: PAUSE OG TEKST "VINNEREN ER......." */}
             {drawStep >= 2 && (
-              <div style={{ fontSize: '1.8em', color: '#ffb703', marginTop: '15px', fontWeight: 'bold', fontStyle: 'italic', animation: 'pulse 1s infinite' }}>
+              <div style={{ fontSize: '1.8em', color: '#ffb703', marginTop: '15px', fontWeight: 'bold', fontStyle: 'italic' }}>
                 Vinneren er.........
               </div>
             )}
 
-            {/* STEG 3: NAVNET AVDEKKES MED JUBEL */}
             {drawStep === 3 && (
               <div style={{ fontSize: '2.5em', color: '#4cc9f0', marginTop: '15px', fontWeight: 'bold' }}>
                 🎉 {revealedWinnerName}! 🎉
@@ -842,7 +853,6 @@ export default function App() {
             )}
           </div>
 
-          {/* LUKK OG BEKREFT NÅR ALT ER VISES */}
           {drawStep === 3 && (
             <button onClick={handleFinishDrawingOverlay} style={{ ...btnStyle, padding: '14px 28px', fontSize: '1.2em', marginTop: '20px', backgroundColor: '#f72585', color: '#fff' }}>
               ✖ Lukk og fortsett
