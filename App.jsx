@@ -1,3 +1,5 @@
+import vin1 from './src/assets/vin1.jpg';
+import vin2 from './src/assets/vin2.jpg';
 import React, { useState, useEffect, useRef } from 'react';
 
 const exactDataFromImage = {
