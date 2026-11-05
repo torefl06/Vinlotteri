@@ -103,6 +103,15 @@ const btnStyle = {
   fontWeight: 'bold'
 };
 
+// Hjelpefunksjon for å sortere uker numerisk (Uke 45, Uke 46 osv.)
+const sortWeeks = (weeksArray) => {
+  return [...weeksArray].sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+    return numA - numB;
+  });
+};
+
 const getAudioContext = () => new (window.AudioContext || window.webkitAudioContext)();
 
 const playSoftDrumroll = () => {
@@ -197,9 +206,14 @@ export default function App() {
   const [tickets, setTickets] = useState(initialTicketsFromImage);
   const [tips, setTips] = useState([]);
   const [feedback, setFeedback] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
+
+  // Admin & Regnskap Auth
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
+  const [isAccountingUnlocked, setIsAccountingUnlocked] = useState(false);
+  const [accountingPassword, setAccountingPassword] = useState('');
 
   const [bottle1Winners, setBottle1Winners] = useState({});
   const [bottle2Winners, setBottle2Winners] = useState({});
@@ -212,8 +226,9 @@ export default function App() {
   const [revealedWinnerName, setRevealedWinnerName] = useState('');
   const [showDrawConfirmModal, setShowDrawConfirmModal] = useState(false);
 
-  const activeWeeks = Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner);
-  const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
+  const allWeeksSorted = sortWeeks(Object.keys(defaultPrizes));
+  const activeWeeks = sortWeeks(Object.keys(defaultPrizes).filter(w => !prizes[w]?.winner));
+  const completedWeeks = sortWeeks(Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner));
 
   const [selectedWeek, setSelectedWeek] = useState(activeWeeks[0] || 'Uke 46');
   const [cart, setCart] = useState({});
@@ -228,6 +243,10 @@ export default function App() {
   const [fbName, setFbName] = useState('');
   const [fbText, setFbText] = useState('');
   const [replyInput, setReplyInput] = useState({});
+
+  // Regnskapsfelter for utgifter
+  const [expenseTitle, setExpenseTitle] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
 
   useEffect(() => {
     if (prizes[selectedWeek]?.winner && activeWeeks.length > 0) {
@@ -255,7 +274,6 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // SANNTIDSLYTTER FOR VINTIPS
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "tips"), (docSnap) => {
       if (docSnap.exists()) {
@@ -267,13 +285,24 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // SANNTIDSLYTTER FOR RIS & ROS
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "feedback"), (docSnap) => {
       if (docSnap.exists()) {
         setFeedback(docSnap.data().list || []);
       } else {
         setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // SANNTIDSLYTTER FOR UTGIFTER (REGNSKAP)
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "vinlotteri", "expenses"), (docSnap) => {
+      if (docSnap.exists()) {
+        setExpenses(docSnap.data().list || []);
+      } else {
+        setDoc(doc(db, "vinlotteri", "expenses"), { list: [] });
       }
     });
     return () => unsub();
@@ -389,47 +418,6 @@ export default function App() {
     }, 100);
   };
 
-  const handleFinishDrawingOverlay = () => {
-    setIsDrawing(false);
-    if (pendingWinnerWeek) {
-      setShowDrawConfirmModal(true);
-    }
-  };
-
-  const lockDrawAndCompleteWeek = async () => {
-    const week = pendingWinnerWeek;
-    if (!week) return;
-
-    const b1 = bottle1Winners[week] || "Ukjent";
-    const b2 = bottle2Winners[week] || "Ukjent";
-    const finalWinnersCombined = `Flaske 1: ${b1} & Flaske 2: ${b2}`;
-
-    const updatedPrizes = {
-      ...prizes,
-      [week]: { ...prizes[week], winner: finalWinnersCombined }
-    };
-
-    setPrizes(updatedPrizes);
-    await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
-
-    setShowDrawConfirmModal(false);
-    setPendingWinnerWeek(null);
-    alert(`${week} er nå ferdig og låst som trukket!`);
-  };
-
-  const cancelDrawAndResetWeek = (week) => {
-    const updatedB1 = { ...bottle1Winners };
-    const updatedB2 = { ...bottle2Winners };
-    delete updatedB1[week];
-    delete updatedB2[week];
-
-    setBottle1Winners(updatedB1);
-    setBottle2Winners(updatedB2);
-    setShowDrawConfirmModal(false);
-    setPendingWinnerWeek(null);
-    alert(`Trekningen for ${week} ble annullert. Du kan trekke på nytt!`);
-  };
-
   const undoCompletedWeekDraw = async (week) => {
     if (window.confirm(`Vil du annullere den lagrede trekningen for ${week} slik at du kan trekke på nytt?`)) {
       const updatedPrizes = {
@@ -468,7 +456,6 @@ export default function App() {
     setTipName(''); setTipWine(''); setTipPrice(''); setTipDesc('');
   };
 
-  // --- ADMIN: Slette og Redigere Vintips ---
   const handleDeleteTip = async (idToDelete) => {
     if (!window.confirm("Vil du slette dette vintipset?")) return;
     const updated = tips.filter(t => t.id !== idToDelete);
@@ -504,7 +491,6 @@ export default function App() {
     setFbName(''); setFbText('');
   };
 
-  // --- ADMIN: Slette og Redigere Ris & Ros ---
   const handleDeleteFeedback = async (idToDelete) => {
     if (!window.confirm("Vil du slette denne tilbakemeldingen?")) return;
     const updated = feedback.filter(f => f.id !== idToDelete);
@@ -527,7 +513,6 @@ export default function App() {
     await setDoc(doc(db, "vinlotteri", "feedback"), { list: updated });
   };
 
-  // --- TRÅDET SVAR SYSTEM FOR RIS & ROS ---
   const handleAddReply = async (feedbackId) => {
     const text = replyInput[feedbackId];
     if (!text || !text.trim()) return;
@@ -562,18 +547,51 @@ export default function App() {
     else alert('Feil passord!');
   };
 
+  const handleAccountingLogin = (e) => {
+    e.preventDefault();
+    if (accountingPassword === 'vinlotteri26') {
+      setIsAccountingUnlocked(true);
+    } else {
+      alert('Feil passord for regnskap!');
+    }
+  };
+
+  // --- REGNSKAPSFUNKSJONER ---
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+    if (!expenseTitle || !expenseAmount) return;
+    const newExpense = {
+      id: Date.now(),
+      title: expenseTitle,
+      amount: parseFloat(expenseAmount) || 0,
+      date: new Date().toLocaleDateString('no-NO')
+    };
+    const updated = [newExpense, ...expenses];
+    setExpenses(updated);
+    setExpenseTitle('');
+    setExpenseAmount('');
+    await setDoc(doc(db, "vinlotteri", "expenses"), { list: updated });
+  };
+
+  const handleDeleteExpense = async (idToDelete) => {
+    if (!window.confirm("Vil du slette denne utgiften?")) return;
+    const updated = expenses.filter(e => e.id !== idToDelete);
+    setExpenses(updated);
+    await setDoc(doc(db, "vinlotteri", "expenses"), { list: updated });
+  };
+
   const handleResetAll = async () => {
     if (window.confirm("Er du sikker på at du vil tilbakestille alle lodd og premier til bildet sitt oppsett?")) {
       await setDoc(doc(db, "vinlotteri", "prizes"), defaultPrizes);
       await setDoc(doc(db, "vinlotteri", "tickets"), initialTicketsFromImage);
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
       await setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
+      await setDoc(doc(db, "vinlotteri", "expenses"), { list: [] });
       setBottle1Winners({});
       setBottle2Winners({});
     }
   };
 
-  // --- KOMPRIMERING & BILDEOPPLASTING (unngår Firestore 1MB-feil) ---
   const handleImageUpload = (week, field, file) => {
     if (!file) return;
     const reader = new FileReader();
@@ -612,6 +630,19 @@ export default function App() {
     return summary;
   };
 
+  // Regn ut totalt solgte lodd på tvers av alle uker
+  const calculateTotalTicketIncome = () => {
+    let totalTicketsCount = 0;
+    Object.values(tickets).forEach(weekTickets => {
+      totalTicketsCount += Object.keys(weekTickets || {}).length;
+    });
+    return totalTicketsCount * TICKET_PRICE;
+  };
+
+  const totalIncome = calculateTotalTicketIncome();
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const netBalance = totalIncome - totalExpenses;
+
   return (
     <div style={{ backgroundColor: '#0b132b', color: '#ffffff', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       <header style={{ padding: '20px', textAlign: 'center', backgroundColor: '#1c2541', borderBottom: '2px solid #3a506b' }}>
@@ -637,7 +668,6 @@ export default function App() {
                 <button onClick={() => setShowPrizeModal(false)} style={{ backgroundColor: '#e63946', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>✖ Lukk</button>
               </div>
 
-              {/* Vis bilde 1 og bilde 2 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                 <div style={{ textAlign: 'center', backgroundColor: '#0b132b', padding: '10px', borderRadius: '8px' }}>
                   <h4 style={{ margin: '0 0 8px 0', color: '#4cc9f0' }}>Flaske 1</h4>
@@ -689,7 +719,6 @@ export default function App() {
                   </select>
                 </div>
 
-                {/* Forklaring */}
                 <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', fontSize: '0.9em', flexWrap: 'wrap' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#2a9d8f', borderRadius: '3px', display: 'inline-block' }}></span> Grønn = Ledig
@@ -702,7 +731,6 @@ export default function App() {
                   </span>
                 </div>
 
-                {/* Loddrutenett 1-50 */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
                   {Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1).map(num => {
                     const isTaken = !!currentWeekTickets[num];
@@ -745,7 +773,6 @@ export default function App() {
                   })}
                 </div>
 
-                {/* Skjema */}
                 <form onSubmit={handleOpenPaymentPrompt} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
                   <h3>🛒 Din handlekurv</h3>
                   
@@ -884,7 +911,6 @@ export default function App() {
                   </div>
                   <small style={{ color: '#8d99ae' }}>– {name} {date && `(${date})`}</small>
 
-                  {/* Underkommentarer / Svar */}
                   {replies.length > 0 && (
                     <div style={{ marginTop: '10px', paddingLeft: '12px', borderLeft: '2px solid #3a506b', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {replies.map(r => (
@@ -896,7 +922,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Svar Input felt */}
                   <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
@@ -920,7 +945,7 @@ export default function App() {
           </div>
         )}
 
-        {/* FANER: Admin */}
+        {/* FANER: Admin & Beskyttet Regnskap */}
         {activeTab === 'admin' && (
           <div>
             <h2>⚙️ Admin-panel</h2>
@@ -933,11 +958,12 @@ export default function App() {
             ) : (
               <div>
                 <p style={{ color: '#4cc9f0' }}>✅ Du er innlogget som admin!</p>
-                <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '20px' }}>🔄 Tilbakestill alt til bildet sitt oppsett</button>
+                <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '25px' }}>🔄 Tilbakestill alt til bildet sitt oppsett</button>
 
-                <h3>Styr trekninger manuelt per flaske</h3>
-                {Object.keys(prizes).map(week => {
-                  const isDone = !!prizes[week].winner;
+                {/* --- SEKSJON: KRONOLOGISK TREKNING (SORTERT UKER) --- */}
+                <h3 style={{ borderBottom: '2px solid #3a506b', paddingBottom: '8px' }}>🎲 Styr trekninger manuelt per flaske</h3>
+                {allWeeksSorted.map(week => {
+                  const isDone = !!prizes[week]?.winner;
                   const hasWinner1 = !!bottle1Winners[week];
                   const hasWinner2 = !!bottle2Winners[week];
 
@@ -972,6 +998,106 @@ export default function App() {
                     </div>
                   );
                 })}
+
+                {/* --- SEKSJON: BESKYTTET REGNSKAP (KREVER PASSORD PÅ NYTT) --- */}
+                <div style={{ marginTop: '40px', backgroundColor: '#1c2541', padding: '20px', borderRadius: '12px', border: '2px solid #4cc9f0' }}>
+                  <h3 style={{ margin: '0 0 15px 0', color: '#4cc9f0' }}>📊 Vinkassen & Regnskap (Låst)</h3>
+
+                  {!isAccountingUnlocked ? (
+                    <form onSubmit={handleAccountingLogin} style={{ backgroundColor: '#0b132b', padding: '15px', borderRadius: '8px' }}>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '0.95em' }}>🔒 Skriv inn passord på nytt for å låse opp regnskapet:</p>
+                      <input 
+                        type="password" 
+                        value={accountingPassword} 
+                        onChange={e => setAccountingPassword(e.target.value)} 
+                        placeholder="Passord for regnskap" 
+                        style={inputStyle} 
+                      /><br/><br/>
+                      <button type="submit" style={{ ...btnStyle, backgroundColor: '#4cc9f0', color: '#0b132b' }}>
+                        🔓 Lås opp Regnskap
+                      </button>
+                    </form>
+                  ) : (
+                    <div>
+                      {/* Oversiktskort */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                        <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #2a9d8f' }}>
+                          <small style={{ color: '#8d99ae' }}>Totalt Inn (Kjøpte lodd):</small>
+                          <div style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#2a9d8f' }}>{totalIncome} kr</div>
+                        </div>
+
+                        <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #e63946' }}>
+                          <small style={{ color: '#8d99ae' }}>Totalt Ut (Vinkjøp):</small>
+                          <div style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#e63946' }}>{totalExpenses} kr</div>
+                        </div>
+
+                        <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '8px', borderLeft: `4px solid ${netBalance >= 0 ? '#4cc9f0' : '#e63946'}` }}>
+                          <small style={{ color: '#8d99ae' }}>Netto Saldo (Kasse):</small>
+                          <div style={{ fontSize: '1.4em', fontWeight: 'bold', color: netBalance >= 0 ? '#4cc9f0' : '#e63946' }}>{netBalance} kr</div>
+                        </div>
+                      </div>
+
+                      {/* Legg til utgift */}
+                      <h4 style={{ margin: '0 0 10px 0', color: '#4cc9f0' }}>Legg til utgift (Kjøpt vin)</h4>
+                      <form onSubmit={handleAddExpense} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Beskrivelse (f.eks. Vinmonopolet uke 47)" 
+                          value={expenseTitle} 
+                          onChange={e => setExpenseTitle(e.target.value)} 
+                          style={{ ...inputStyle, flex: '2', minWidth: '180px' }} 
+                          required 
+                        />
+                        <input 
+                          type="number" 
+                          placeholder="Beløp (kr)" 
+                          value={expenseAmount} 
+                          onChange={e => setExpenseAmount(e.target.value)} 
+                          style={{ ...inputStyle, flex: '1', minWidth: '100px' }} 
+                          required 
+                        />
+                        <button type="submit" style={{ ...btnStyle, backgroundColor: '#2a9d8f' }}>+ Registrer</button>
+                      </form>
+
+                      {/* Liste over førte utgifter */}
+                      <h4 style={{ margin: '0 0 10px 0', color: '#8d99ae' }}>Registrerte Utgifter</h4>
+                      {expenses.length === 0 ? (
+                        <p style={{ color: '#8d99ae', fontSize: '0.9em' }}>Ingen utgifter er registrert ennå.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {expenses.map(e => (
+                            <div key={e.id} style={{ backgroundColor: '#0b132b', padding: '10px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <strong>{e.title}</strong>
+                                <div style={{ fontSize: '0.8em', color: '#8d99ae' }}>{e.date}</div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span style={{ color: '#e63946', fontWeight: 'bold' }}>-{e.amount} kr</span>
+                                <button onClick={() => handleDeleteExpense(e.id)} style={{ backgroundColor: '#e63946', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75em' }}>Slett</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Spesifisert loddinntekt per uke */}
+                      <h4 style={{ margin: '20px 0 10px 0', color: '#8d99ae' }}>Innbetalt per uke</h4>
+                      <div style={{ backgroundColor: '#0b132b', padding: '10px', borderRadius: '6px', fontSize: '0.9em' }}>
+                        {allWeeksSorted.map(w => {
+                          const count = Object.keys(tickets[w] || {}).length;
+                          return (
+                            <div key={w} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #1c2541' }}>
+                              <span>{w}:</span>
+                              <span>{count} lodd ({count * TICKET_PRICE} kr)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                    </div>
+                  )}
+                </div>
+
               </div>
             )}
           </div>
