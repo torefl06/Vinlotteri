@@ -92,7 +92,9 @@ export default function App() {
   const completedWeeks = Object.keys(defaultPrizes).filter(w => !!prizes[w]?.winner);
 
   const [selectedWeek, setSelectedWeek] = useState(activeWeeks[0] || 'Uke 46');
-  const [selectedNumbers, setSelectedNumbers] = useState([]);
+  
+  // Handlekurv på tvers av uker: { "Uke 46": [2, 5], "Uke 47": [10] }
+  const [cart, setCart] = useState({});
   const [buyerName, setBuyerName] = useState('');
 
   const [tipName, setTipName] = useState('');
@@ -101,7 +103,6 @@ export default function App() {
   const [fbName, setFbName] = useState('');
   const [fbText, setFbText] = useState('');
 
-  // Sørg for at valgt uke alltid er en aktiv uke dersom forrige blir trukket ferdig
   useEffect(() => {
     if (prizes[selectedWeek]?.winner && activeWeeks.length > 0) {
       setSelectedWeek(activeWeeks[0]);
@@ -145,17 +146,24 @@ export default function App() {
   }, []);
 
   const currentWeekTickets = tickets[selectedWeek] || {};
+  const currentWeekCart = cart[selectedWeek] || [];
 
   const toggleSelectNumber = (num) => {
     if (currentWeekTickets[num]) return;
-    if (selectedNumbers.includes(num)) {
-      setSelectedNumbers(selectedNumbers.filter(n => n !== num));
-    } else {
-      setSelectedNumbers([...selectedNumbers, num]);
-    }
+    const isSelected = currentWeekCart.includes(num);
+    const updatedWeekCart = isSelected
+      ? currentWeekCart.filter(n => n !== num)
+      : [...currentWeekCart, num];
+
+    setCart({
+      ...cart,
+      [selectedWeek]: updatedWeekCart
+    });
   };
 
-  const totalPrice = selectedNumbers.length * TICKET_PRICE;
+  // Beregn totalt antall lodd på tvers av ALLE valgte uker
+  const totalCartCount = Object.values(cart).reduce((sum, nums) => sum + nums.length, 0);
+  const totalPrice = totalCartCount * TICKET_PRICE;
 
   const handleBuyTickets = async (e) => {
     e.preventDefault();
@@ -163,28 +171,30 @@ export default function App() {
       alert("Vennligst skriv inn navnet ditt.");
       return;
     }
-    if (selectedNumbers.length === 0) {
+    if (totalCartCount === 0) {
       alert("Vennligst velg minst ett ledig grønt lodd.");
       return;
     }
 
-    const updatedWeekTickets = { ...currentWeekTickets };
-    selectedNumbers.forEach(num => {
-      updatedWeekTickets[num] = buyerName.trim();
-    });
+    const updatedTickets = { ...tickets };
 
-    const updatedTickets = {
-      ...tickets,
-      [selectedWeek]: updatedWeekTickets
-    };
+    Object.entries(cart).forEach(([week, nums]) => {
+      if (nums.length > 0) {
+        const weekTickets = { ...(updatedTickets[week] || {}) };
+        nums.forEach(n => {
+          weekTickets[n] = buyerName.trim();
+        });
+        updatedTickets[week] = weekTickets;
+      }
+    });
 
     setTickets(updatedTickets);
     await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
-    alert(`Gratulerer ${buyerName}! Du har reservert lodd: ${selectedNumbers.map(n => `#${n}`).join(', ')}.\n\nHusk å Vippse ${totalPrice} kr til ${VIPPS_RECEIVER_NAME} (${VIPPS_NUMBER})!`);
-    setSelectedNumbers([]);
+    
+    alert(`Gratulerer ${buyerName}! Du har reservert totalt ${totalCartCount} lodd.\n\nHusk å Vippse ${totalPrice} kr til ${VIPPS_RECEIVER_NAME} (${VIPPS_NUMBER})!`);
+    setCart({});
   };
 
-  // TREKNING AV 2 FLASKER MED VISUELL ANIMASJON
   const handleDrawTwoWinners = (week) => {
     const weekTickets = tickets[week] || {};
     const takenTicketNumbers = Object.keys(weekTickets);
@@ -193,7 +203,6 @@ export default function App() {
       return;
     }
 
-    // 1. TREKK FLASKE 1
     setIsDrawing(true);
     setDrawingTitle(`🍾 TREKKER FLASKE 1 (${week})...`);
     setDrawingWinnerInfo('');
@@ -210,7 +219,6 @@ export default function App() {
         const winner1 = weekTickets[ticket1];
         setDrawingWinnerInfo(`🍾 FLASKE 1: ${winner1} (Lodd #${ticket1})`);
 
-        // 2. PAUSE SÅ TREKK FLASKE 2
         setTimeout(() => {
           setDrawingTitle(`🍾 TREKKER FLASKE 2 (${week})...`);
           setDrawingWinnerInfo('');
@@ -224,7 +232,6 @@ export default function App() {
             if (counter2 > 20) {
               clearInterval(interval2);
               let ticket2 = takenTicketNumbers[Math.floor(Math.random() * takenTicketNumbers.length)];
-              // Prøv å finne et annet lodd om mulig
               if (takenTicketNumbers.length > 1 && ticket2 === ticket1) {
                 const remaining = takenTicketNumbers.filter(t => t !== ticket1);
                 ticket2 = remaining[Math.floor(Math.random() * remaining.length)];
@@ -235,7 +242,6 @@ export default function App() {
               setAnimatedNumber(ticket2);
               setDrawingWinnerInfo(`🎉 BEGGE VINNERE TRUKKET!\n\n🍾 Flaske 1: ${winner1} (#${ticket1})\n🍾 Flaske 2: ${winner2} (#${ticket2})`);
 
-              // Lagre vinnerne til Firebase (skjuler uken automatisk)
               const updatedPrizes = {
                 ...prizes,
                 [week]: { ...prizes[week], winner: combinedWinners }
@@ -339,7 +345,7 @@ export default function App() {
               <>
                 <div style={{ marginBottom: '15px' }}>
                   <label>Velg Aktiv Uke: </label>
-                  <select value={selectedWeek} onChange={(e) => { setSelectedWeek(e.target.value); setSelectedNumbers([]); }} style={inputStyle}>
+                  <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} style={inputStyle}>
                     {activeWeeks.map(w => <option key={w} value={w}>{w}</option>)}
                   </select>
                 </div>
@@ -361,7 +367,7 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
                   {Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1).map(num => {
                     const isTaken = !!currentWeekTickets[num];
-                    const isSelected = selectedNumbers.includes(num);
+                    const isSelected = currentWeekCart.includes(num);
                     const owner = currentWeekTickets[num];
 
                     let bg = '#2a9d8f';
@@ -393,22 +399,33 @@ export default function App() {
                       >
                         <span style={{ fontSize: '1.1em', marginBottom: '2px' }}>#{num}</span>
                         <span style={{ fontSize: '0.85em', fontWeight: 'normal', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '100%' }}>
-                          {isTaken ? owner : 'Ledig'}
+                          {isTaken ? owner : (isSelected ? 'VALGT' : 'Ledig')}
                         </span>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* Skjema med Vipps-deep link */}
+                {/* Skjema med felles handlekurv for alle uker */}
                 <form onSubmit={handleBuyTickets} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '25px' }}>
-                  <h3>Reserver valgte lodd ({selectedWeek})</h3>
-                  <p style={{ margin: '5px 0' }}>Valgte lodd: <strong>{selectedNumbers.length > 0 ? selectedNumbers.map(n => `#${n}`).join(', ') : 'Trykk på grønne lodd over'}</strong></p>
+                  <h3>🛒 Din handlekurv (På tvers av uker)</h3>
+                  
+                  {totalCartCount === 0 ? (
+                    <p style={{ color: '#8d99ae' }}>Ingen lodd er valgt ennå. Klikk på de grønne loddene over for å legge til (du kan bytte uke i menyen).</p>
+                  ) : (
+                    <div style={{ marginBottom: '15px' }}>
+                      {Object.entries(cart).map(([w, nums]) => nums.length > 0 && (
+                        <div key={w} style={{ fontSize: '0.9em', color: '#4cc9f0', marginBottom: '4px' }}>
+                          <strong>{w}:</strong> Lodd {nums.map(n => `#${n}`).join(', ')} ({nums.length} stk)
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
                   {/* Boks for Vipps-oppsummering */}
                   <div style={{ backgroundColor: '#0b132b', padding: '12px', borderRadius: '6px', margin: '15px 0', borderLeft: '4px solid #ff5b24' }}>
                     <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#4cc9f0' }}>
-                      💰 Å betale: {totalPrice} kr <span style={{ fontSize: '0.8em', color: '#8d99ae', fontWeight: 'normal' }}>({selectedNumbers.length} stk × 10 kr)</span>
+                      💰 Å betale samlet: {totalPrice} kr <span style={{ fontSize: '0.8em', color: '#8d99ae', fontWeight: 'normal' }}>({totalCartCount} lodd totalt × 10 kr)</span>
                     </div>
                     <div style={{ fontSize: '0.95em', marginTop: '4px' }}>
                       📱 Vipps til: <strong>{VIPPS_RECEIVER_NAME} ({VIPPS_NUMBER})</strong>
@@ -418,15 +435,15 @@ export default function App() {
                   <input type="text" placeholder="Ditt Navn *" value={buyerName} onChange={e => setBuyerName(e.target.value)} style={inputStyle} required /><br/><br/>
                   
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button type="submit" disabled={selectedNumbers.length === 0} style={{ ...btnStyle, opacity: selectedNumbers.length === 0 ? 0.5 : 1 }}>
-                      Lagre min reservasjon
+                    <button type="submit" disabled={totalCartCount === 0} style={{ ...btnStyle, opacity: totalCartCount === 0 ? 0.5 : 1 }}>
+                      Lagre alle reservasjoner
                     </button>
                     
                     <a 
-                      href={`https://qr.vipps.no/28/2/01/0/pay?recipientNumber=${VIPPS_NUMBER}&amount=${totalPrice * 100}&comment=Vinlotteri%20${selectedWeek}`}
+                      href={`https://qr.vipps.no/28/2/01/0/pay?recipientNumber=${VIPPS_NUMBER}&amount=${totalPrice * 100}&comment=Vinlotteri%20Samlet`}
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      style={{ backgroundColor: '#ff5b24', color: '#fff', padding: '8px 14px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em', display: 'inline-block' }}
+                      style={{ backgroundColor: '#ff5b24', color: '#fff', padding: '8px 14px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em', display: 'inline-block', opacity: totalCartCount === 0 ? 0.5 : 1 }}
                     >
                       📱 Åpne Vipps ({totalPrice} kr)
                     </a>
