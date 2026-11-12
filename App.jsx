@@ -214,8 +214,8 @@ export default function App() {
   const [isAccountingUnlocked, setIsAccountingUnlocked] = useState(false);
   const [accountingPassword, setAccountingPassword] = useState('');
 
-  const [bottle1Winners, setBottle1Winners] = useState({});
-  const [bottle2Winners, setBottle2Winners] = useState({});
+  // NYTT: Dynamisk liste over trukne flasker per uke: { "Uke 46": [{ bottle: 1, ticket: "10", name: "Tore", text: "Tore (Lodd #10)" }, ...] }
+  const [drawnBottles, setDrawnBottles] = useState({});
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingTitle, setDrawingTitle] = useState('');
@@ -249,7 +249,7 @@ export default function App() {
     }
   }, [prizes]);
 
-  // Sanntidslyttere uten automatisk nullstilling
+  // Sanntidslyttere
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "vinlotteri", "prizes"), (docSnap) => {
       if (docSnap.exists()) setPrizes(docSnap.data());
@@ -301,10 +301,34 @@ export default function App() {
     });
   };
 
+  // NYTT: Admin kan redigere eller frigi hvilket som helst lodd direkte
+  const handleAdminEditTicket = async (e, num) => {
+    e.stopPropagation();
+    const currentOwner = currentWeekTickets[num] || '';
+    const promptMsg = currentOwner
+      ? `Rediger eier av lodd #${num} i ${selectedWeek} (tøm feltet og trykk OK for å gjøre loddet ledig igjen):`
+      : `Legg inn navn på kjøper for ledig lodd #${num} i ${selectedWeek}:`;
+
+    const newOwner = window.prompt(promptMsg, currentOwner);
+    if (newOwner === null) return; // Avbrutt
+
+    const updatedTickets = { ...tickets };
+    const weekTickets = { ...(updatedTickets[selectedWeek] || {}) };
+
+    if (newOwner.trim() === '') {
+      delete weekTickets[num];
+    } else {
+      weekTickets[num] = newOwner.trim();
+    }
+
+    updatedTickets[selectedWeek] = weekTickets;
+    setTickets(updatedTickets);
+    await setDoc(doc(db, "vinlotteri", "tickets"), updatedTickets);
+  };
+
   const totalCartCount = Object.values(cart).reduce((sum, nums) => sum + nums.length, 0);
   const totalPrice = totalCartCount * TICKET_PRICE;
 
-  // LÅSER OG LAGRER LODD MED VIPPS-BEKREFTELSE
   const handleLockTickets = async (e) => {
     e.preventDefault();
 
@@ -317,7 +341,6 @@ export default function App() {
       return;
     }
 
-    // VIPPS-SJEKK
     const hasVippsed = window.confirm(`Har du husket å vippse kr ${totalPrice},- til ${VIPPS_RECEIVER_NAME} (${VIPPS_NUMBER})?`);
     if (!hasVippsed) {
       alert("Kjøpet ble avbrutt. Vennligst Vipps før du låser loddene.");
@@ -343,26 +366,26 @@ export default function App() {
     setCart({});
   };
 
-  const drawSingleBottle = (week, bottleNumber) => {
+  // NYTT: Trekk neste flaske dynamisk (ubegrenset antall per uke)
+  const drawNextBottle = (week) => {
     const weekTickets = tickets[week] || {};
-    let availableTicketNumbers = Object.keys(weekTickets);
+    const weekDrawn = drawnBottles[week] || [];
+    const alreadyWinningTickets = weekDrawn.map(d => String(d.ticket));
 
-    if (bottleNumber === 2 && bottle1Winners[week]) {
-      const match = bottle1Winners[week].match(/Lodd #(\d+)/);
-      if (match && match[1]) {
-        const winningTicket1 = match[1];
-        availableTicketNumbers = availableTicketNumbers.filter(n => n !== winningTicket1);
-      }
-    }
+    const availableTicketNumbers = Object.keys(weekTickets).filter(
+      n => !alreadyWinningTickets.includes(String(n))
+    );
 
     if (availableTicketNumbers.length === 0) {
-      alert("Det er ingen ledige lodd å trekke fra!");
+      alert("Det er ingen flere ledige lodd å trekke fra denne uken!");
       return;
     }
 
+    const nextBottleNumber = weekDrawn.length + 1;
+
     setIsDrawing(true);
     setDrawStep(1);
-    setDrawingTitle(`🍾 TREKKER FLASKE ${bottleNumber} (${week})`);
+    setDrawingTitle(`🍾 TREKKER FLASKE ${nextBottleNumber} (${week})`);
     setRevealedWinnerName('');
     playSoftDrumroll();
 
@@ -389,26 +412,36 @@ export default function App() {
           setRevealedWinnerName(winnerName);
           playHarmonicFanfare();
 
-          if (bottleNumber === 1) {
-            setBottle1Winners({ ...bottle1Winners, [week]: winnerString });
-          } else if (bottleNumber === 2) {
-            setBottle2Winners({ ...bottle2Winners, [week]: winnerString });
-          }
+          const newEntry = {
+            bottle: nextBottleNumber,
+            ticket: winningTicket,
+            name: winnerName,
+            text: winnerString
+          };
+
+          setDrawnBottles(prev => ({
+            ...prev,
+            [week]: [...(prev[week] || []), newEntry]
+          }));
         }, 2500);
       }
     }, 100);
   };
 
+  // NYTT: Fullfør uansett antall trukne flasker (1, 2, 3, 4...)
   const finalizeDraw = async (week) => {
-    const w1 = bottle1Winners[week];
-    const w2 = bottle2Winners[week];
+    const weekDrawn = drawnBottles[week] || [];
 
-    if (!w1 || !w2) {
-      alert("Du må trekke både Flaske 1 og Flaske 2 før du fullfører trekningen.");
+    if (weekDrawn.length === 0) {
+      alert("Du må trekke minst én flaske før du fullfører trekningen.");
       return;
     }
 
-    const finalWinnersText = `${w1} og ${w2}`;
+    const winnerTexts = weekDrawn.map(d => d.text);
+    const finalWinnersText = winnerTexts.length === 1
+      ? winnerTexts[0]
+      : `${winnerTexts.slice(0, -1).join(', ')} og ${winnerTexts[winnerTexts.length - 1]}`;
+
     const updatedPrizes = {
       ...prizes,
       [week]: { ...(prizes[week] || {}), winner: finalWinnersText }
@@ -417,17 +450,16 @@ export default function App() {
     setPrizes(updatedPrizes);
     await setDoc(doc(db, "vinlotteri", "prizes"), updatedPrizes);
 
-    alert(`Trekningen for ${week} er nå fullført og lagret! Vinnerne er synlige i Vinnere-fanen.`);
+    alert(`Trekningen for ${week} (${weekDrawn.length} ${weekDrawn.length === 1 ? 'flaske' : 'flasker'}) er nå fullført og lagret!`);
   };
 
   const cancelOrUndoDraw = async (week) => {
     if (window.confirm(`Vil du annullere/nullstille trekningen for ${week}?`)) {
-      const updatedB1 = { ...bottle1Winners };
-      const updatedB2 = { ...bottle2Winners };
-      delete updatedB1[week];
-      delete updatedB2[week];
-      setBottle1Winners(updatedB1);
-      setBottle2Winners(updatedB2);
+      setDrawnBottles(prev => {
+        const updated = { ...prev };
+        delete updated[week];
+        return updated;
+      });
 
       if (prizes[week]?.winner) {
         const updatedPrizes = {
@@ -610,8 +642,7 @@ export default function App() {
       await setDoc(doc(db, "vinlotteri", "tips"), { list: [] });
       await setDoc(doc(db, "vinlotteri", "feedback"), { list: [] });
       await setDoc(doc(db, "vinlotteri", "expenses"), { list: [] });
-      setBottle1Winners({});
-      setBottle2Winners({});
+      setDrawnBottles({});
       alert("Alt er tilbakestilt.");
     }
   };
@@ -786,6 +817,12 @@ export default function App() {
                   </select>
                 </div>
 
+                {isAdmin && (
+                  <div style={{ backgroundColor: '#3a506b', padding: '10px 14px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9em', color: '#4cc9f0' }}>
+                    ⚙️ <strong>Admin-modus aktiv:</strong> Klikk på <strong>✏️</strong> på et hvilket som helst lodd under for å endre navn, legge til eier manuelt eller frigi loddet.
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', fontSize: '0.9em', flexWrap: 'wrap' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{ width: '15px', height: '15px', backgroundColor: '#2a9d8f', borderRadius: '3px', display: 'inline-block' }}></span> Grønn = Ledig
@@ -809,33 +846,58 @@ export default function App() {
                     if (isSelected) bg = '#f72585';
 
                     return (
-                      <button
-                        key={num}
-                        onClick={() => toggleSelectNumber(num)}
-                        disabled={isTaken}
-                        style={{
-                          backgroundColor: bg,
-                          color: '#fff',
-                          border: isSelected ? '2px solid #fff' : 'none',
-                          borderRadius: '6px',
-                          padding: '8px 4px',
-                          fontWeight: 'bold',
-                          cursor: isTaken ? 'not-allowed' : 'pointer',
-                          fontSize: '0.75em',
-                          minHeight: '55px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          wordBreak: 'break-word',
-                          overflow: 'hidden'
-                        }}
-                      >
-                        <span style={{ fontSize: '1.1em', marginBottom: '2px' }}>#{num}</span>
-                        <span style={{ fontSize: '0.85em', fontWeight: 'normal', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '100%' }}>
-                          {isTaken ? owner : (isSelected ? 'VALGT' : 'Ledig')}
-                        </span>
-                      </button>
+                      <div key={num} style={{ position: 'relative' }}>
+                        <button
+                          onClick={() => toggleSelectNumber(num)}
+                          disabled={isTaken}
+                          style={{
+                            width: '100%',
+                            backgroundColor: bg,
+                            color: '#fff',
+                            border: isSelected ? '2px solid #fff' : 'none',
+                            borderRadius: '6px',
+                            padding: '8px 4px',
+                            fontWeight: 'bold',
+                            cursor: isTaken ? 'not-allowed' : 'pointer',
+                            fontSize: '0.75em',
+                            minHeight: '55px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            wordBreak: 'break-word',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <span style={{ fontSize: '1.1em', marginBottom: '2px' }}>#{num}</span>
+                          <span style={{ fontSize: '0.85em', fontWeight: 'normal', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '100%' }}>
+                            {isTaken ? owner : (isSelected ? 'VALGT' : 'Ledig')}
+                          </span>
+                        </button>
+
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleAdminEditTicket(e, num)}
+                            title={`Rediger lodd #${num}`}
+                            style={{
+                              position: 'absolute',
+                              top: '3px',
+                              right: '3px',
+                              backgroundColor: '#0b132b',
+                              color: '#4cc9f0',
+                              border: '1px solid #4cc9f0',
+                              borderRadius: '4px',
+                              padding: '1px 4px',
+                              fontSize: '0.7em',
+                              cursor: 'pointer',
+                              lineHeight: 1.2
+                            }}
+                          >
+                            ✏️
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -1044,49 +1106,54 @@ export default function App() {
 
                 <button onClick={handleResetAll} style={{ ...btnStyle, backgroundColor: '#d90429', marginBottom: '25px' }}>⚠️ Tilbakestill alt (Krever passord-bekreftelse)</button>
 
-                {/* SEKSJON: KRONOLOGISK TREKNING */}
+                {/* SEKSJON: KRONOLOGISK TREKNING (DYNAMISK ANTALL FLASKER) */}
                 <h3 style={{ borderBottom: '2px solid #3a506b', paddingBottom: '8px' }}>🎲 Styr trekninger manuelt per flaske</h3>
+                <p style={{ fontSize: '0.9em', color: '#8d99ae', marginTop: '-4px', marginBottom: '15px' }}>
+                  Trekk så mange flasker du ønsker for uken, og trykk «Fullfør & Lagre Vinnere» når alle flaskene er trukket.
+                </p>
+
                 {allWeeksSorted.map(week => {
                   const isDone = !!prizes[week]?.winner;
-                  const hasWinner1 = !!bottle1Winners[week];
-                  const hasWinner2 = !!bottle2Winners[week];
+                  const weekDrawn = drawnBottles[week] || [];
+                  const nextBottleNum = weekDrawn.length + 1;
 
                   return (
                     <div key={week} style={{ backgroundColor: '#1c2541', padding: '15px', borderRadius: '8px', marginBottom: '12px', borderLeft: '4px solid #f72585' }}>
                       <div style={{ marginBottom: '8px' }}>
-                        <strong>{week}:</strong> {isDone ? `Vinnere: ${prizes[week].winner}` : (hasWinner1 ? (hasWinner2 ? `Flaske 1: ${bottle1Winners[week]} | Flaske 2: ${bottle2Winners[week]}` : `Flaske 1: ${bottle1Winners[week]}`) : 'Ingen flasker trukket ennå')}
+                        <strong>{week}:</strong>{' '}
+                        {isDone ? (
+                          <span>Vinnere: <strong>{prizes[week].winner}</strong></span>
+                        ) : weekDrawn.length > 0 ? (
+                          <span>
+                            {weekDrawn.map(d => `Flaske ${d.bottle}: ${d.text}`).join(' | ')}
+                          </span>
+                        ) : (
+                          'Ingen flasker trukket ennå'
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                         {!isDone && (
                           <>
                             <button 
-                              onClick={() => drawSingleBottle(week, 1)} 
-                              disabled={hasWinner1} 
-                              style={{ ...btnStyle, opacity: hasWinner1 ? 0.4 : 1 }}
+                              onClick={() => drawNextBottle(week)} 
+                              style={btnStyle}
                             >
-                              🎲 Trekk Flaske 1
-                            </button>
-                            <button 
-                              onClick={() => drawSingleBottle(week, 2)} 
-                              disabled={!hasWinner1 || hasWinner2} 
-                              style={{ ...btnStyle, opacity: (!hasWinner1 || hasWinner2) ? 0.4 : 1 }}
-                            >
-                              🎲 Trekk Flaske 2
+                              🎲 Trekk Flaske {nextBottleNum}
                             </button>
 
-                            {hasWinner1 && hasWinner2 && (
+                            {weekDrawn.length > 0 && (
                               <button 
                                 onClick={() => finalizeDraw(week)} 
                                 style={{ ...btnStyle, backgroundColor: '#2a9d8f' }}
                               >
-                                🔒 Fullfør & Lagre Vinnere
+                                🔒 Fullfør & Lagre Vinnere ({weekDrawn.length} {weekDrawn.length === 1 ? 'flaske' : 'flasker'})
                               </button>
                             )}
                           </>
                         )}
 
-                        {(hasWinner1 || isDone) && (
+                        {(weekDrawn.length > 0 || isDone) && (
                           <button 
                             onClick={() => cancelOrUndoDraw(week)} 
                             style={{ ...btnStyle, backgroundColor: '#e63946', fontSize: '0.85em' }}
