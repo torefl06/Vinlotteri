@@ -214,7 +214,7 @@ export default function App() {
   const [isAccountingUnlocked, setIsAccountingUnlocked] = useState(false);
   const [accountingPassword, setAccountingPassword] = useState('');
 
-  // NYTT: Dynamisk liste over trukne flasker per uke: { "Uke 46": [{ bottle: 1, ticket: "10", name: "Tore", text: "Tore (Lodd #10)" }, ...] }
+  // Dynamisk liste over trukne flasker per uke
   const [drawnBottles, setDrawnBottles] = useState({});
 
   const [isDrawing, setIsDrawing] = useState(false);
@@ -287,6 +287,8 @@ export default function App() {
 
   const currentWeekTickets = tickets[selectedWeek] || {};
   const currentWeekCart = cart[selectedWeek] || [];
+  const soldCount = Object.keys(currentWeekTickets).length;
+  const availableCount = TOTAL_TICKETS - soldCount;
 
   const toggleSelectNumber = (num) => {
     if (currentWeekTickets[num]) return;
@@ -301,7 +303,6 @@ export default function App() {
     });
   };
 
-  // NYTT: Admin kan redigere eller frigi hvilket som helst lodd direkte
   const handleAdminEditTicket = async (e, num) => {
     e.stopPropagation();
     const currentOwner = currentWeekTickets[num] || '';
@@ -310,7 +311,7 @@ export default function App() {
       : `Legg inn navn på kjøper for ledig lodd #${num} i ${selectedWeek}:`;
 
     const newOwner = window.prompt(promptMsg, currentOwner);
-    if (newOwner === null) return; // Avbrutt
+    if (newOwner === null) return;
 
     const updatedTickets = { ...tickets };
     const weekTickets = { ...(updatedTickets[selectedWeek] || {}) };
@@ -366,7 +367,6 @@ export default function App() {
     setCart({});
   };
 
-  // NYTT: Trekk neste flaske dynamisk (ubegrenset antall per uke)
   const drawNextBottle = (week) => {
     const weekTickets = tickets[week] || {};
     const weekDrawn = drawnBottles[week] || [];
@@ -428,7 +428,6 @@ export default function App() {
     }, 100);
   };
 
-  // NYTT: Fullfør uansett antall trukne flasker (1, 2, 3, 4...)
   const finalizeDraw = async (week) => {
     const weekDrawn = drawnBottles[week] || [];
 
@@ -804,7 +803,15 @@ export default function App() {
         {/* FANER: Kjøp Lodd */}
         {activeTab === 'lodd' && (
           <div>
-            <h2>🎟️ Loddbord (1–50)</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+              <h2 style={{ margin: 0 }}>🎟️ Loddbord (1–50)</h2>
+              {activeWeeks.length > 0 && (
+                <div style={{ backgroundColor: '#1c2541', padding: '6px 12px', borderRadius: '20px', border: '1px solid #3a506b', fontSize: '0.9em' }}>
+                  Solgte lodd ({selectedWeek}): <strong style={{ color: '#f72585' }}>{soldCount}</strong> / {TOTAL_TICKETS}{' '}
+                  <span style={{ color: '#2a9d8f', marginLeft: '6px' }}>({availableCount} ledige)</span>
+                </div>
+              )}
+            </div>
             
             {activeWeeks.length === 0 ? (
               <p style={{ color: '#4cc9f0', fontSize: '1.2em' }}>🎉 Alle ukene er ferdig trukket!</p>
